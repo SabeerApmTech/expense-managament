@@ -17,6 +17,33 @@ import { DeleteConfirmDialog } from '../../../components/common/DeleteConfirmDia
 
 interface Props { open: boolean; onClose: () => void; asPanel?: boolean; }
 
+interface ModeItem { id: number; name: string; }
+
+interface ModeListProps {
+  modes: ModeItem[];
+  travel: boolean;
+  onEdit: (id: number, modeName: string, travel: boolean) => void;
+  onDelete: (mode: ModeItem) => void;
+}
+
+const ModeList = ({ modes, travel, onEdit, onDelete }: ModeListProps) => (
+  <Stack spacing={0.5}>
+    {modes.length === 0
+      ? <Typography variant="caption" color="text.secondary">None added yet</Typography>
+      : modes.map((mode) => (
+        <Box key={mode.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 0.25 }}>
+          <Typography variant="body2" sx={{ flex: 1, fontSize: 13 }}>{mode.name}</Typography>
+          <IconButton size="small" onClick={() => onEdit(mode.id, mode.name, travel)} sx={{ p: 0.5, color: 'primary.main' }}>
+            <EditIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+          <IconButton size="small" onClick={() => onDelete(mode)} sx={{ p: 0.5, color: 'error.main' }}>
+            <DeleteIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Box>
+      ))}
+  </Stack>
+);
+
 export const TravelPayModeDialog = ({ open, onClose, asPanel = false }: Props) => {
   const [isTravelMode, setIsTravelMode] = useState(true);
   const [name, setName] = useState('');
@@ -46,24 +73,6 @@ export const TravelPayModeDialog = ({ open, onClose, asPanel = false }: Props) =
       },
     }, { onSuccess: resetForm });
   };
-
-  const ModeList = ({ modes, travel }: { modes: { id: number; name: string }[]; travel: boolean }) => (
-    <Stack spacing={0.5}>
-      {modes.length === 0
-        ? <Typography variant="caption" color="text.secondary">None added yet</Typography>
-        : modes.map((m) => (
-          <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 0.25 }}>
-            <Typography variant="body2" sx={{ flex: 1, fontSize: 13 }}>{m.name}</Typography>
-            <IconButton size="small" onClick={() => handleEdit(m.id, m.name, travel)} sx={{ p: 0.5, color: 'primary.main' }}>
-              <EditIcon sx={{ fontSize: 15 }} />
-            </IconButton>
-            <IconButton size="small" onClick={() => setDeleteConfirm({ id: m.id, name: m.name })} sx={{ p: 0.5, color: 'error.main' }}>
-              <DeleteIcon sx={{ fontSize: 15 }} />
-            </IconButton>
-          </Box>
-        ))}
-    </Stack>
-  );
 
   const formSection = (
     <Box sx={{ px: 3, pt: 2, pb: 2, flexShrink: 0 }}>
@@ -102,7 +111,7 @@ export const TravelPayModeDialog = ({ open, onClose, asPanel = false }: Props) =
             <DirectionsBusIcon fontSize="small" color="primary" />
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Travel Modes</Typography>
           </Box>
-          <ModeList modes={travelModes} travel={true} />
+          <ModeList modes={travelModes} travel={true} onEdit={handleEdit} onDelete={setDeleteConfirm} />
         </Box>
         <Divider orientation="vertical" flexItem />
         <Box sx={{ flex: 1 }}>
@@ -110,7 +119,7 @@ export const TravelPayModeDialog = ({ open, onClose, asPanel = false }: Props) =
             <PaymentIcon fontSize="small" color="secondary" />
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Pay Modes</Typography>
           </Box>
-          <ModeList modes={payModes} travel={false} />
+          <ModeList modes={payModes} travel={false} onEdit={handleEdit} onDelete={setDeleteConfirm} />
         </Box>
       </Box>
     </Box>

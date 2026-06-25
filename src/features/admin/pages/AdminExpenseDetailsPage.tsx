@@ -27,7 +27,7 @@ export const AdminExpenseDetailsPage = () => {
   const [remarksError, setRemarksError] = useState('');
 
   const handleApprove = () => {
-    approveMutation.mutate({ expenseId: Number(id) }, { onSuccess: () => navigate('/admin/approvals') });
+    approveMutation.mutate({ expenseId: Number(id), status: 3 }, { onSuccess: () => navigate('/admin/approvals') });
   };
 
   const handleReject = () => {

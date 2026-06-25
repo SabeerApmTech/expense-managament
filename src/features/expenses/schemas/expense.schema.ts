@@ -3,15 +3,15 @@ import { z } from 'zod';
 export const expenseItemSchema = z.object({
   initiatedBy: z.string().min(1, 'Initiated by is required'),
   expenseTypeId: z.string().min(1, 'Expense type is required'),
-  description: z.string().max(500).optional().default(''),
+  description: z.string().max(500),
   fromDate: z.string().min(1, 'From date is required'),
   toDate: z.string().min(1, 'To date is required'),
-  amount: z.number({ invalid_type_error: 'Amount is required' }).min(0.01, 'Amount must be greater than 0'),
+  amount: z.number().min(0.01, 'Amount must be greater than 0'),
   payModeId: z.string().min(1, 'Pay mode is required'),
   travelModeId: z.string().min(1, 'Travel mode is required'),
   areaFrom: z.string().min(1, 'From location is required'),
   areaTo: z.string().min(1, 'To location is required'),
-  billFiles: z.array(z.any()).optional().default([]),
+  billFiles: z.array(z.any()),
 }).refine(
   (data) => !data.fromDate || !data.toDate || data.toDate >= data.fromDate,
   { message: 'To date must be on or after from date', path: ['toDate'] },

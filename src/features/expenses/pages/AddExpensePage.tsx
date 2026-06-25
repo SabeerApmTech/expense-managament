@@ -16,6 +16,7 @@ export const AddExpensePage = () => {
       allFiles.push(...(item.billFiles ?? []));
       const fileIndices = (item.billFiles ?? []).map((_, i) => startIdx + i);
       return {
+        InitiatedBy: item.initiatedBy,
         ExpenseTypeId: Number(item.expenseTypeId),
         Description: item.description ?? '',
         FromDate: item.fromDate + 'T00:00:00',
@@ -32,7 +33,6 @@ export const AddExpensePage = () => {
     mutate(
       {
         Id: 0,
-        InitiatedBy: values.initiatedBy,
         ItemsJson: JSON.stringify(items),
         BillFiles: allFiles,
       },

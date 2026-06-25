@@ -18,7 +18,6 @@ import { useApproveExpense, useRejectExpense, useSettleExpense } from '../hooks/
 import { useApprovalLimits, useEmployees } from '../hooks/useAdminMaster';
 import { useAuthContext } from '../../../store/authStore';
 import { formatDate, formatCurrency, formatDateTime } from '../../../utils/formatters';
-import { isSubmitted, isApproved } from '../../../constants/masterData';
 import type { Expense } from '../../../types/expense.types';
 
 interface Props {

@@ -66,7 +66,8 @@ function exportCSV<T extends Record<string, unknown>>(
   URL.revokeObjectURL(url);
 }
 
-const pdfSafe = (str: string) => str.replace(/₹/g, 'Rs. ').replace(/[^\x00-\x7F]/g, '?');
+const pdfSafe = (str: string) =>
+  Array.from(str.replace(/₹/g, 'Rs. '), (char) => (char.charCodeAt(0) <= 0x7f ? char : '?')).join('');
 
 function exportPDF<T extends Record<string, unknown>>(
   columns: Column<T>[],

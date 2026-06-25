@@ -20,6 +20,7 @@ export const EditExpensePage = () => {
       const startIdx = allFiles.length;
       allFiles.push(...(item.billFiles ?? []));
       return {
+        InitiatedBy: item.initiatedBy,
         ExpenseTypeId: Number(item.expenseTypeId),
         Description: item.description ?? '',
         FromDate: item.fromDate + 'T00:00:00',
@@ -33,12 +34,13 @@ export const EditExpensePage = () => {
       };
     });
     mutate(
-      { Id: Number(expense.id), InitiatedBy: values.initiatedBy, ItemsJson: JSON.stringify(items), BillFiles: allFiles },
+      { Id: Number(expense.id), ItemsJson: JSON.stringify(items), BillFiles: allFiles },
       { onSuccess: () => navigate('/expenses') },
     );
   };
 
   const defaultItems = (expense.details ?? []).map(detail => ({
+    initiatedBy: detail.initiatedBy ?? '',
     expenseTypeId: String(detail.expenseTypeId ?? ''),
     description: detail.description ?? '',
     fromDate: (detail.fromDate ?? '').slice(0, 10),
@@ -63,7 +65,6 @@ export const EditExpensePage = () => {
       <Paper sx={{ p: 3 }}>
         <ExpenseForm
           defaultValues={{
-            initiatedBy: '',
             items: defaultItems.length > 0 ? defaultItems : undefined,
           }}
           existingBillUrls={(expense.details ?? []).map(d => d.billUrl?.split(',')[0] ?? null)}
