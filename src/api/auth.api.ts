@@ -2,15 +2,23 @@ import { apiClient } from './axios';
 import { getStoredToken } from '../store/authStore';
 import type { LoginRequest, AuthUser, ApiLoginResponse, Role } from '../types/auth.types';
 
-const ROLE_MAP: Record<number, Role> = {
+const NUMERIC_ROLE_MAP: Record<number, Role> = {
   1: 'USER',
   2: 'ADMIN',
   3: 'SUPER_ADMIN',
 };
 
-// API returns role=1 (USER) for admin accounts — use designationId=null to detect admin
-function resolveRole(numericRole: number, designationId: number | null): Role {
-  const mapped: Role = ROLE_MAP[numericRole] ?? 'USER';
+const STRING_ROLE_MAP: Record<string, Role> = {
+  User: 'USER',
+  Admin: 'ADMIN',
+  SuperAdmin: 'SUPER_ADMIN',
+};
+
+function resolveRole(role: number | string, designationId: number | null): Role {
+  if (typeof role === 'string') {
+    return STRING_ROLE_MAP[role] ?? 'USER';
+  }
+  const mapped: Role = NUMERIC_ROLE_MAP[role] ?? 'USER';
   if (mapped === 'USER' && designationId === null) return 'ADMIN';
   return mapped;
 }

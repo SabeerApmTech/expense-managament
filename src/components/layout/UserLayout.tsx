@@ -31,6 +31,7 @@ export const UserLayout = () => {
           <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main', flex: 1, fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
             EMS
           </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>{user?.name}</Typography>
           <Tooltip title="Account">
             <IconButton onClick={(e) => setAnchor(e.currentTarget)} size="small">
               <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 12 }}>{getInitials(user?.name)}</Avatar>

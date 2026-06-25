@@ -1,15 +1,18 @@
 import { Chip } from '@mui/material';
-import { STATUS_COLORS } from '../../constants/masterData';
+import { STATUS_COLORS, resolveStatusLabel } from '../../constants/masterData';
 
 interface Props {
-  status: string;
+  status: string | number;
 }
 
-export const StatusChip = ({ status }: Props) => (
-  <Chip
-    label={status}
-    color={STATUS_COLORS[status] || 'default'}
-    size="small"
-    sx={{ fontWeight: 600 }}
-  />
-);
+export const StatusChip = ({ status }: Props) => {
+  const label = resolveStatusLabel(status);
+  return (
+    <Chip
+      label={label}
+      color={STATUS_COLORS[label] || 'default'}
+      size="small"
+      sx={{ fontWeight: 600 }}
+    />
+  );
+};

@@ -35,12 +35,7 @@ export const getStoredAuth = (): AuthUser | null => {
     if (!token) return null;
     const stored = localStorage.getItem(USER_KEY);
     if (!stored) return null;
-    const user = JSON.parse(stored) as AuthUser;
-    // Correct stale sessions: designationId=null means admin, even if role was stored as USER
-    if (user.role === 'USER' && user.designationId === null) {
-      return { ...user, role: 'ADMIN' };
-    }
-    return user;
+    return JSON.parse(stored) as AuthUser;
   } catch {
     return null;
   }

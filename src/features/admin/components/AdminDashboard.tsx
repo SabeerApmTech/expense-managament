@@ -3,9 +3,12 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import CancelIcon from '@mui/icons-material/Cancel';
+import SendIcon from '@mui/icons-material/Send';
+import HowToRegIcon from '@mui/icons-material/HowToReg';
+import VerifiedIcon from '@mui/icons-material/Verified';
 import { useAdminDashboard } from '../hooks/useAdminMaster';
 
-type PaletteColor = 'primary' | 'success' | 'info' | 'error';
+type PaletteColor = 'primary' | 'success' | 'info' | 'error' | 'warning' | 'secondary';
 
 interface StatCardProps {
   title: string;
@@ -19,12 +22,12 @@ const StatCard = ({ title, value, icon, color, loading }: StatCardProps) => (
   <Paper
     sx={{
       borderRadius: 3,
-      p: 2.5,
+      p: 1.5,
       display: 'flex',
       flexDirection: { xs: 'column', sm: 'row' },
       alignItems: { xs: 'center', sm: 'center' },
       textAlign: { xs: 'center', sm: 'left' },
-      gap: 2,
+      gap: 1.5,
       background: (theme) =>
         `linear-gradient(135deg, ${theme.palette[color].main} 0%, ${theme.palette[color].dark} 100%)`,
       color: 'white',
@@ -35,8 +38,8 @@ const StatCard = ({ title, value, icon, color, loading }: StatCardProps) => (
   >
     <Box
       sx={{
-        width: 52,
-        height: 52,
+        width: 44,
+        height: 44,
         borderRadius: '50%',
         bgcolor: 'rgba(255,255,255,0.2)',
         display: 'flex',
@@ -72,7 +75,7 @@ export const AdminDashboard = () => {
 
   return (
     <Grid container spacing={2} sx={{ mb: 2 }}>
-      <Grid size={{ xs: 6, sm: 3 }}>
+      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
         <StatCard
           title="Today's Entries"
           value={data?.todayEntries}
@@ -81,16 +84,43 @@ export const AdminDashboard = () => {
           loading={isLoading}
         />
       </Grid>
-      <Grid size={{ xs: 6, sm: 3 }}>
+      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
         <StatCard
-          title="Approved Today"
-          value={data?.todayApproved}
+          title="Submitted"
+          value={data?.todaySubmited}
+          icon={<SendIcon sx={{ color: 'white', fontSize: 26 }} />}
+          color="secondary"
+          loading={isLoading}
+        />
+      </Grid>
+      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+        <StatCard
+          title="Initiated Approved"
+          value={data?.todayInitiatedApproved}
+          icon={<HowToRegIcon sx={{ color: 'white', fontSize: 26 }} />}
+          color="info"
+          loading={isLoading}
+        />
+      </Grid>
+      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+        <StatCard
+          title="Admin Approved"
+          value={data?.todayApproved1}
           icon={<CheckCircleIcon sx={{ color: 'white', fontSize: 26 }} />}
           color="success"
           loading={isLoading}
         />
       </Grid>
-      <Grid size={{ xs: 6, sm: 3 }}>
+      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+        <StatCard
+          title="Super Admin Approved"
+          value={data?.todayApproved2}
+          icon={<VerifiedIcon sx={{ color: 'white', fontSize: 26 }} />}
+          color="success"
+          loading={isLoading}
+        />
+      </Grid>
+      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
         <StatCard
           title="Settled Today"
           value={data?.todaySettled}
@@ -99,7 +129,7 @@ export const AdminDashboard = () => {
           loading={isLoading}
         />
       </Grid>
-      <Grid size={{ xs: 6, sm: 3 }}>
+      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
         <StatCard
           title="Rejected Today"
           value={data?.todayRejected}

@@ -1,4 +1,22 @@
-export type ExpenseStatus = 'Submitted' | 'Approved' | 'Rejected' | 'Settled';
+export type ExpenseStatus = string | number;
+
+export interface ExpenseDetail {
+  id: number;
+  expenseTypeId: number;
+  initiatedBy?: string | null;
+  initiatedApprovedBy?: string | null;
+  initiatedApprovedDate?: string | null;
+  status?: number;
+  description?: string | null;
+  fromDate: string;
+  toDate: string;
+  amount: number;
+  payModeId: number;
+  travelModeId: number;
+  areaFrom?: string | null;
+  areaTo?: string | null;
+  billUrl?: string | null;
+}
 
 export interface ExpenseTypeMaster {
   id: number;
@@ -24,33 +42,40 @@ export interface Expense {
   expenseNo?: string;
   employeeId?: string;
   employeeName?: string;
-  expenseType: string;
-  expenseTypeId?: number;
-  description: string;
-  fromDate: string;
-  toDate: string;
   amount: number;
-  payMode: string;
-  payModeId?: number;
-  travelMode: string;
-  travelModeId?: number;
-  areaFrom: string;
-  areaTo: string;
-  createdBy?: string;
-  createdDate?: string;
+  status: ExpenseStatus;
   initiatedBy?: string | null;
   submittedOn?: string | null;
+  approvedBy?: string | null;
+  approved1By?: string | null;
+  approved1Date?: string | null;
+  approved2By?: string | null;
+  approved2Date?: string | null;
+  rejectedBy?: string | null;
+  settledby?: string | null;
+  details?: ExpenseDetail[];
+  // legacy / flat fields (returned in some endpoints)
+  expenseType?: string;
+  expenseTypeId?: number;
+  description?: string | null;
+  fromDate?: string;
+  toDate?: string;
+  areaFrom?: string | null;
+  areaTo?: string | null;
+  payMode?: string;
+  payModeId?: number;
+  travelMode?: string;
+  travelModeId?: number;
+  createdBy?: string;
+  createdDate?: string;
   billUrl?: string | null;
   settlementBillUrl?: string | null;
-  status: ExpenseStatus;
-  approvedBy?: string | null;
-  approvedDate?: string | null;
-  rejectedBy?: string | null;
-  rejectedDate?: string | null;
   rejectReason?: string | null;
   settledBy?: string | null;
   settledDate?: string | null;
   settlementRemarks?: string | null;
+  approvedDate?: string | null;
+  rejectedDate?: string | null;
 }
 
 export interface ExpenseListResponse {
@@ -60,8 +85,8 @@ export interface ExpenseListResponse {
   data: Expense[];
 }
 
-export interface SaveExpenseRequest {
-  Id: number;
+export interface ExpenseItemPayload {
+  InitiatedBy: string;
   ExpenseTypeId: number;
   Description: string;
   FromDate: string;
@@ -71,8 +96,20 @@ export interface SaveExpenseRequest {
   TravelModeId: number;
   AreaFrom: string;
   AreaTo: string;
-  InitiatedBy: string;
-  BillFile?: File | null;
+  FileIndices: number[];
+}
+
+export interface SaveExpenseRequest {
+  Id: number;
+  ItemsJson: string;
+  BillFiles: File[];
+}
+
+export interface ApprovalLimit {
+  id: number;
+  initiatedLimit: number;
+  adminLimit: number;
+  superAdminLimit: number;
 }
 
 export interface ApprovalRequest {
@@ -201,7 +238,10 @@ export interface ExpensePageLoad {
 
 export interface DashboardData {
   todayEntries: number;
-  todayApproved: number;
+  todaySubmited: number;
+  todayInitiatedApproved: number;
+  todayApproved1: number;
+  todayApproved2: number;
   todaySettled: number;
   todayRejected: number;
 }

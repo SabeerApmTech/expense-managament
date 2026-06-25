@@ -7,7 +7,6 @@ export const EXPENSE_KEYS = {
   all: ['expenses'] as const,
   lists: () => [...EXPENSE_KEYS.all, 'list'] as const,
   list: (filters: ExpenseFilters) => [...EXPENSE_KEYS.lists(), filters] as const,
-  detail: (id: string) => [...EXPENSE_KEYS.all, 'detail', id] as const,
 };
 
 export const useExpenseList = (filters: ExpenseFilters = {}) => {
@@ -20,36 +19,52 @@ export const useExpenseList = (filters: ExpenseFilters = {}) => {
   return useQuery({
     queryKey: EXPENSE_KEYS.list(filters),
     queryFn: () => expensesApi.list(params),
+    staleTime: 0,
   });
 };
-
-export const useExpenseDetail = (id: string) =>
-  useQuery({
-    queryKey: EXPENSE_KEYS.detail(id),
-    queryFn: () => expensesApi.getById(id),
-    enabled: !!id,
-  });
 
 export const useSaveExpense = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: SaveExpenseRequest) => expensesApi.save(data),
-    onSuccess: (_, vars) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() });
-      if (vars.Id !== 0) {
-        queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.detail(String(vars.Id)) });
-      }
-      enqueueSnackbar(
-        vars.Id === 0 ? 'Expense submitted successfully' : 'Expense updated successfully',
-        { variant: 'success' }
-      );
+      queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      enqueueSnackbar('Expense submitted successfully', { variant: 'success' });
     },
-    onError: (_, vars) => {
-      enqueueSnackbar(
-        vars.Id === 0 ? 'Failed to submit expense' : 'Failed to update expense',
-        { variant: 'error' }
-      );
+    onError: (error) => {
+      console.error('Save expense error:', error);
+      enqueueSnackbar('Failed to submit expense', { variant: 'error' });
     },
+  });
+};
+
+export const useInitiatorApproveItem = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { expenseId: number; status: number; reason?: string }) =>
+      expensesApi.initiatorApproveReject(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] });
+      enqueueSnackbar('Item approved', { variant: 'success' });
+    },
+    onError: () => enqueueSnackbar('Failed to approve item', { variant: 'error' }),
+  });
+};
+
+export const useInitiatorRejectItem = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { expenseId: number; status: number; reason?: string }) =>
+      expensesApi.initiatorApproveReject(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] });
+      enqueueSnackbar('Item rejected', { variant: 'info' });
+    },
+    onError: () => enqueueSnackbar('Failed to reject item', { variant: 'error' }),
   });
 };
 
@@ -59,6 +74,8 @@ export const useDeleteExpense = () => {
     mutationFn: (id: string) => expensesApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       enqueueSnackbar('Expense deleted successfully', { variant: 'success' });
     },
     onError: () => {

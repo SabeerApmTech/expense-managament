@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { enqueueSnackbar } from 'notistack';
+import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../../api/admin.api';
 import { MASTER_KEYS } from '../../expenses/hooks/useMasterData';
+import { useManagedMutation } from '../../../utils/mutations';
 
 const ADMIN_MASTER_KEYS = {
   designations: ['designations'] as const,
@@ -13,12 +13,10 @@ const ADMIN_MASTER_KEYS = {
   employeeLevelMaps: ['employee-level-maps'] as const,
   designationLevelMaps: ['designation-level-maps'] as const,
   dashboard: ['dashboard'] as const,
+  approvalLimits: ['approval-limits'] as const,
 };
 
-const ok = (msg: string) => enqueueSnackbar(msg, { variant: 'success' });
-const err = (msg: string) => enqueueSnackbar(msg, { variant: 'error' });
-
-// ─── Designation (existing) ──────────────────────────────────────────────────
+// ─── Designation ─────────────────────────────────────────────────────────────
 
 export const useDesignations = () =>
   useQuery({
@@ -33,17 +31,12 @@ export const useDesignationExpenseMaps = () =>
     queryFn: adminApi.getDesignationExpenseMaps,
   });
 
-export const useSaveDesignationExpenseMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.saveDesignationExpenseMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.designationExpenseMaps });
-      ok('Saved successfully');
-    },
-    onError: () => err('Failed to save'),
-  });
-};
+export const useSaveDesignationExpenseMap = () =>
+  useManagedMutation(
+    adminApi.saveDesignationExpenseMap,
+    [ADMIN_MASTER_KEYS.designationExpenseMaps],
+    { success: 'Saved successfully', error: 'Failed to save' },
+  );
 
 export const useDesignationTravelMaps = () =>
   useQuery({
@@ -51,42 +44,26 @@ export const useDesignationTravelMaps = () =>
     queryFn: adminApi.getDesignationTravelMaps,
   });
 
-export const useSaveDesignationTravelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.saveDesignationTravelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.designationTravelMaps });
-      ok('Saved successfully');
-    },
-    onError: () => err('Failed to save'),
-  });
-};
+export const useSaveDesignationTravelMap = () =>
+  useManagedMutation(
+    adminApi.saveDesignationTravelMap,
+    [ADMIN_MASTER_KEYS.designationTravelMaps],
+    { success: 'Saved successfully', error: 'Failed to save' },
+  );
 
-export const useDeleteDesignationTravelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.deleteDesignationTravelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.designationTravelMaps });
-      ok('Deleted successfully');
-    },
-    onError: () => err('Failed to delete'),
-  });
-};
+export const useDeleteDesignationTravelMap = () =>
+  useManagedMutation(
+    adminApi.deleteDesignationTravelMap,
+    [ADMIN_MASTER_KEYS.designationTravelMaps],
+    { success: 'Deleted successfully', error: 'Failed to delete' },
+  );
 
-export const useSaveTravelPayMode = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.saveTravelPayMode,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: MASTER_KEYS.travelModes });
-      qc.invalidateQueries({ queryKey: MASTER_KEYS.payModes });
-      ok('Saved successfully');
-    },
-    onError: () => err('Failed to save'),
-  });
-};
+export const useSaveTravelPayMode = () =>
+  useManagedMutation(
+    adminApi.saveTravelPayMode,
+    [MASTER_KEYS.travelModes, MASTER_KEYS.payModes],
+    { success: 'Saved successfully', error: 'Failed to save' },
+  );
 
 // ─── Levels ──────────────────────────────────────────────────────────────────
 
@@ -96,44 +73,31 @@ export const useLevels = () =>
     queryFn: adminApi.getLevels,
   });
 
-export const useSaveLevel = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.saveLevel,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.levels });
-      ok('Level created');
-    },
-    onError: () => err('Failed to create level'),
-  });
-};
+export const useSaveLevel = () =>
+  useManagedMutation(
+    adminApi.saveLevel,
+    [ADMIN_MASTER_KEYS.levels],
+    { success: 'Level created', error: 'Failed to create level' },
+  );
 
-export const useUpdateLevel = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.updateLevel,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.levels });
-      ok('Level updated');
-    },
-    onError: () => err('Failed to update level'),
-  });
-};
+export const useUpdateLevel = () =>
+  useManagedMutation(
+    adminApi.updateLevel,
+    [ADMIN_MASTER_KEYS.levels],
+    { success: 'Level updated', error: 'Failed to update level' },
+  );
 
-export const useDeleteLevel = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.deleteLevel,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.levels });
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.expenseLevelMaps });
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.employeeLevelMaps });
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.designationLevelMaps });
-      ok('Level deleted');
-    },
-    onError: () => err('Failed to delete level'),
-  });
-};
+export const useDeleteLevel = () =>
+  useManagedMutation(
+    adminApi.deleteLevel,
+    [
+      ADMIN_MASTER_KEYS.levels,
+      ADMIN_MASTER_KEYS.expenseLevelMaps,
+      ADMIN_MASTER_KEYS.employeeLevelMaps,
+      ADMIN_MASTER_KEYS.designationLevelMaps,
+    ],
+    { success: 'Level deleted', error: 'Failed to delete level' },
+  );
 
 // ─── Level ↔ Expense maps ─────────────────────────────────────────────────────
 
@@ -143,41 +107,26 @@ export const useExpenseLevelMaps = () =>
     queryFn: adminApi.getExpenseLevelMaps,
   });
 
-export const useSaveExpenseLevelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.saveExpenseLevelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.expenseLevelMaps });
-      ok('Mapping saved');
-    },
-    onError: () => err('Failed to save mapping'),
-  });
-};
+export const useSaveExpenseLevelMap = () =>
+  useManagedMutation(
+    adminApi.saveExpenseLevelMap,
+    [ADMIN_MASTER_KEYS.expenseLevelMaps],
+    { success: 'Mapping saved', error: 'Failed to save mapping' },
+  );
 
-export const useUpdateExpenseLevelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.updateExpenseLevelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.expenseLevelMaps });
-      ok('Mapping updated');
-    },
-    onError: () => err('Failed to update mapping'),
-  });
-};
+export const useUpdateExpenseLevelMap = () =>
+  useManagedMutation(
+    adminApi.updateExpenseLevelMap,
+    [ADMIN_MASTER_KEYS.expenseLevelMaps],
+    { success: 'Mapping updated', error: 'Failed to update mapping' },
+  );
 
-export const useDeleteExpenseLevelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.deleteExpenseLevelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.expenseLevelMaps });
-      ok('Mapping deleted');
-    },
-    onError: () => err('Failed to delete mapping'),
-  });
-};
+export const useDeleteExpenseLevelMap = () =>
+  useManagedMutation(
+    adminApi.deleteExpenseLevelMap,
+    [ADMIN_MASTER_KEYS.expenseLevelMaps],
+    { success: 'Mapping deleted', error: 'Failed to delete mapping' },
+  );
 
 // ─── Level ↔ Employee maps ────────────────────────────────────────────────────
 
@@ -194,41 +143,26 @@ export const useEmployeeLevelMaps = () =>
     queryFn: adminApi.getEmployeeLevelMaps,
   });
 
-export const useSaveEmployeeLevelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.saveEmployeeLevelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.employeeLevelMaps });
-      ok('Mapping saved');
-    },
-    onError: () => err('Failed to save mapping'),
-  });
-};
+export const useSaveEmployeeLevelMap = () =>
+  useManagedMutation(
+    adminApi.saveEmployeeLevelMap,
+    [ADMIN_MASTER_KEYS.employeeLevelMaps],
+    { success: 'Mapping saved', error: 'Failed to save mapping' },
+  );
 
-export const useUpdateEmployeeLevelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.updateEmployeeLevelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.employeeLevelMaps });
-      ok('Mapping updated');
-    },
-    onError: () => err('Failed to update mapping'),
-  });
-};
+export const useUpdateEmployeeLevelMap = () =>
+  useManagedMutation(
+    adminApi.updateEmployeeLevelMap,
+    [ADMIN_MASTER_KEYS.employeeLevelMaps],
+    { success: 'Mapping updated', error: 'Failed to update mapping' },
+  );
 
-export const useDeleteEmployeeLevelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.deleteEmployeeLevelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.employeeLevelMaps });
-      ok('Mapping deleted');
-    },
-    onError: () => err('Failed to delete mapping'),
-  });
-};
+export const useDeleteEmployeeLevelMap = () =>
+  useManagedMutation(
+    adminApi.deleteEmployeeLevelMap,
+    [ADMIN_MASTER_KEYS.employeeLevelMaps],
+    { success: 'Mapping deleted', error: 'Failed to delete mapping' },
+  );
 
 // ─── Level ↔ Designation maps ─────────────────────────────────────────────────
 
@@ -238,29 +172,19 @@ export const useDesignationLevelMaps = () =>
     queryFn: adminApi.getDesignationLevelMaps,
   });
 
-export const useSaveDesignationLevelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.saveDesignationLevelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.designationLevelMaps });
-      ok('Mapping saved');
-    },
-    onError: () => err('Failed to save mapping'),
-  });
-};
+export const useSaveDesignationLevelMap = () =>
+  useManagedMutation(
+    adminApi.saveDesignationLevelMap,
+    [ADMIN_MASTER_KEYS.designationLevelMaps],
+    { success: 'Mapping saved', error: 'Failed to save mapping' },
+  );
 
-export const useDeleteDesignationLevelMap = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.deleteDesignationLevelMap,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ADMIN_MASTER_KEYS.designationLevelMaps });
-      ok('Mapping deleted');
-    },
-    onError: () => err('Failed to delete mapping'),
-  });
-};
+export const useDeleteDesignationLevelMap = () =>
+  useManagedMutation(
+    adminApi.deleteDesignationLevelMap,
+    [ADMIN_MASTER_KEYS.designationLevelMaps],
+    { success: 'Mapping deleted', error: 'Failed to delete mapping' },
+  );
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
@@ -273,41 +197,47 @@ export const useAdminDashboard = () =>
 
 // ─── Expense Type Management ──────────────────────────────────────────────────
 
-export const useSaveExpenseType = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.saveExpenseType,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: MASTER_KEYS.expenseTypes });
-      ok('Expense type saved');
-    },
-    onError: () => err('Failed to save expense type'),
-  });
-};
+export const useSaveExpenseType = () =>
+  useManagedMutation(
+    adminApi.saveExpenseType,
+    [MASTER_KEYS.expenseTypes],
+    { success: 'Expense type saved', error: 'Failed to save expense type' },
+  );
 
-export const useDeleteExpenseType = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.deleteExpenseType,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: MASTER_KEYS.expenseTypes });
-      ok('Expense type deleted');
-    },
-    onError: () => err('Failed to delete expense type'),
+export const useDeleteExpenseType = () =>
+  useManagedMutation(
+    adminApi.deleteExpenseType,
+    [MASTER_KEYS.expenseTypes],
+    { success: 'Expense type deleted', error: 'Failed to delete expense type' },
+  );
+
+// ─── Approval Limits ─────────────────────────────────────────────────────────
+
+export const useApprovalLimits = () =>
+  useQuery({
+    queryKey: ADMIN_MASTER_KEYS.approvalLimits,
+    queryFn: adminApi.getApprovalLimits,
   });
-};
+
+export const useSaveApprovalLimit = () =>
+  useManagedMutation(
+    adminApi.saveApprovalLimit,
+    [ADMIN_MASTER_KEYS.approvalLimits],
+    { success: 'Approval limit saved', error: 'Failed to save approval limit' },
+  );
+
+export const useDeleteApprovalLimit = () =>
+  useManagedMutation(
+    adminApi.deleteApprovalLimit,
+    [ADMIN_MASTER_KEYS.approvalLimits],
+    { success: 'Approval limit deleted', error: 'Failed to delete' },
+  );
 
 // ─── Delete Travel/Pay Mode ───────────────────────────────────────────────────
 
-export const useDeleteTravelPayMode = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminApi.deleteTravelPayMode,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: MASTER_KEYS.travelModes });
-      qc.invalidateQueries({ queryKey: MASTER_KEYS.payModes });
-      ok('Deleted successfully');
-    },
-    onError: () => err('Failed to delete'),
-  });
-};
+export const useDeleteTravelPayMode = () =>
+  useManagedMutation(
+    adminApi.deleteTravelPayMode,
+    [MASTER_KEYS.travelModes, MASTER_KEYS.payModes],
+    { success: 'Deleted successfully', error: 'Failed to delete' },
+  );

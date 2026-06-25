@@ -28,9 +28,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Expenses', path: ROUTES.USER.EXPENSES, icon: <ReceiptLongIcon />, roles: ['USER'] },
   { label: 'Add Expense', path: ROUTES.USER.ADD_EXPENSE, icon: <AddCircleOutlinedIcon />, roles: ['USER'] },
   { label: 'Expense List', path: ROUTES.ADMIN.APPROVALS, icon: <AdminPanelSettingsIcon />, roles: ['ADMIN'] },
-  { label: 'Reports', path: ROUTES.ADMIN.REPORTS, icon: <AssessmentIcon />, roles: ['ADMIN'] },
   { label: 'Expense Approvals', path: ROUTES.ADMIN.APPROVALS, icon: <AdminPanelSettingsIcon />, roles: ['SUPER_ADMIN'] },
-  { label: 'Reports', path: ROUTES.SUPER_ADMIN.REPORTS, icon: <AssessmentIcon />, roles: ['SUPER_ADMIN'] },
+  { label: 'Reports', path: ROUTES.ADMIN.REPORTS, icon: <AssessmentIcon />, roles: ['ADMIN', 'SUPER_ADMIN'] },
 ];
 
 export const Sidebar = ({ open, onClose, drawerWidth }: Props) => {

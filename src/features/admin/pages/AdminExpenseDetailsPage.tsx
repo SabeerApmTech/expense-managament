@@ -11,20 +11,9 @@ import { useAdminExpenseDetail, useApproveExpense, useRejectExpense } from '../h
 import { LoadingState } from '../../../components/common/LoadingState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { StatusChip } from '../../../components/common/StatusChip';
+import { Field } from '../../../components/common/Field';
 import { formatDate, formatCurrency, formatDateTime } from '../../../utils/formatters';
-
-const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <Box>
-    <Typography
-      variant="caption"
-      color="text.secondary"
-      sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}
-    >
-      {label}
-    </Typography>
-    <Typography variant="body1" sx={{ mt: 0.25 }}>{value || '-'}</Typography>
-  </Box>
-);
+import { isSubmitted } from '../../../constants/masterData';
 
 export const AdminExpenseDetailsPage = () => {
   const { id = '' } = useParams<{ id: string }>();
@@ -49,7 +38,7 @@ export const AdminExpenseDetailsPage = () => {
   if (isLoading) return <LoadingState />;
   if (isError || !data) return <ErrorState onRetry={refetch} />;
 
-  const isPending = data.status === 'Submitted';
+  const isPending = isSubmitted(data.status);
 
   return (
     <Box>
@@ -67,20 +56,13 @@ export const AdminExpenseDetailsPage = () => {
           {isPending && (
             <>
               <Button
-                variant="contained"
-                color="success"
+                variant="contained" color="success"
                 startIcon={approveMutation.isPending ? <CircularProgress size={14} color="inherit" /> : <CheckCircleIcon />}
-                onClick={handleApprove}
-                disabled={approveMutation.isPending}
+                onClick={handleApprove} disabled={approveMutation.isPending}
               >
                 Approve
               </Button>
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<CancelIcon />}
-                onClick={() => setRejectDialog(true)}
-              >
+              <Button variant="contained" color="error" startIcon={<CancelIcon />} onClick={() => setRejectDialog(true)}>
                 Reject
               </Button>
             </>
@@ -90,60 +72,27 @@ export const AdminExpenseDetailsPage = () => {
 
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Expense No" value={data.expenseNo} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Employee" value={data.employeeName} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Expense Type" value={data.expenseType} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Amount" value={formatCurrency(data.amount)} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Pay Mode" value={data.payMode} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Travel Mode" value={data.travelMode} />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Divider />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Field label="Description" value={data.description} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="From Date" value={formatDate(data.fromDate)} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="To Date" value={formatDate(data.toDate)} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Submitted On" value={formatDateTime(data.submittedOn ?? data.createdDate ?? '')} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="From Location" value={data.areaFrom} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="To Location" value={data.areaTo} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Initiated By" value={data.initiatedBy ?? data.createdBy} />
-          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Expense No" value={data.expenseNo} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Employee" value={data.employeeName} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Expense Type" value={data.expenseType} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Amount" value={formatCurrency(data.amount)} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Pay Mode" value={data.payMode} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Travel Mode" value={data.travelMode} /></Grid>
+          <Grid size={{ xs: 12 }}><Divider /></Grid>
+          <Grid size={{ xs: 12 }}><Field label="Description" value={data.description} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="From Date" value={formatDate(data.fromDate)} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="To Date" value={formatDate(data.toDate)} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Submitted On" value={formatDateTime(data.submittedOn ?? data.createdDate ?? '')} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="From Location" value={data.areaFrom} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="To Location" value={data.areaTo} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Initiated By" value={data.initiatedBy ?? data.createdBy} /></Grid>
           {data.rejectReason && (
-            <Grid size={{ xs: 12 }}>
-              <Field label="Rejection Reason" value={data.rejectReason} />
-            </Grid>
+            <Grid size={{ xs: 12 }}><Field label="Rejection Reason" value={data.rejectReason} /></Grid>
           )}
           {data.billUrl && (
             <Grid size={{ xs: 12 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ fontWeight: 600, textTransform: 'uppercase', display: 'block' }}
-              >
+              <Typography variant="caption" color="text.secondary"
+                sx={{ fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>
                 Attachment
               </Typography>
               <Box sx={{ mt: 0.5, display: 'flex', gap: 1 }}>
@@ -158,11 +107,8 @@ export const AdminExpenseDetailsPage = () => {
           )}
           {data.settlementBillUrl && (
             <Grid size={{ xs: 12 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ fontWeight: 600, textTransform: 'uppercase', display: 'block' }}
-              >
+              <Typography variant="caption" color="text.secondary"
+                sx={{ fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>
                 Settlement Proof
               </Typography>
               <Box sx={{ mt: 0.5, display: 'flex', gap: 1 }}>
@@ -187,26 +133,16 @@ export const AdminExpenseDetailsPage = () => {
         <DialogTitle>Reject Expense</DialogTitle>
         <DialogContent>
           <TextField
-            label="Rejection Remarks"
-            multiline
-            rows={4}
-            fullWidth
+            label="Rejection Remarks" multiline rows={4} fullWidth
             value={remarks}
             onChange={(e) => { setRemarks(e.target.value); setRemarksError(''); }}
-            error={!!remarksError}
-            helperText={remarksError}
-            autoFocus
-            sx={{ mt: 1 }}
+            error={!!remarksError} helperText={remarksError}
+            autoFocus sx={{ mt: 1 }}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRejectDialog(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleReject}
-            disabled={rejectMutation.isPending}
-          >
+          <Button variant="contained" color="error" onClick={handleReject} disabled={rejectMutation.isPending}>
             {rejectMutation.isPending ? <CircularProgress size={18} color="inherit" /> : 'Reject'}
           </Button>
         </DialogActions>

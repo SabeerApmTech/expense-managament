@@ -9,7 +9,6 @@ import { EditExpensePage } from '../features/expenses/pages/EditExpensePage';
 import { ExpenseDetailsPage } from '../features/expenses/pages/ExpenseDetailsPage';
 import { ExpenseApprovalListPage } from '../features/admin/pages/ExpenseApprovalListPage';
 import { AdminExpenseDetailsPage } from '../features/admin/pages/AdminExpenseDetailsPage';
-import { ReportsPage } from '../features/admin/pages/ReportsPage';
 import { AdminReportPage } from '../features/admin/pages/AdminReportPage';
 import { useAuthContext } from '../store/authStore';
 
@@ -37,13 +36,7 @@ export const AppRouter = () => {
           <Route element={<MainLayout />}>
             <Route path="/admin/approvals" element={<ExpenseApprovalListPage />} />
             <Route path="/admin/approvals/:id" element={<AdminExpenseDetailsPage />} />
-            <Route path="/admin/reports" element={<AdminReportPage />} />
-          </Route>
-        </Route>
-
-        <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
-          <Route element={<MainLayout />}>
-            <Route path="/super-admin/reports" element={<ReportsPage />} />
+            <Route path="/reports" element={<AdminReportPage />} />
           </Route>
         </Route>
 

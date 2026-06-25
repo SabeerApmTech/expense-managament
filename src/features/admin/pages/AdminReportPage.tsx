@@ -13,7 +13,9 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useExpenseReport } from '../hooks/useAdminExpenses';
 import { useEmployees } from '../hooks/useAdminMaster';
+import { useExpenseTypes } from '../../expenses/hooks/useMasterData';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
+import { resolveStatusLabel } from '../../../constants/masterData';
 import { StatusChip } from '../../../components/common/StatusChip';
 import type { Expense } from '../../../types/expense.types';
 
@@ -21,10 +23,12 @@ export const AdminReportPage = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [employeeId, setEmployeeId] = useState('');
+  const [expenseTypeId, setExpenseTypeId] = useState('');
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [rows, setRows] = useState<Expense[]>([]);
 
   const { data: employees = [] } = useEmployees();
+  const { data: expenseTypes = [] } = useExpenseTypes();
   const { mutate: fetchReport, isPending } = useExpenseReport();
 
   const filteredEmployees = employees.filter((e) =>
@@ -33,7 +37,12 @@ export const AdminReportPage = () => {
 
   const handleGenerate = () => {
     fetchReport(
-      { fromDate, toDate, employeeId },
+      {
+        fromDate: fromDate ? new Date(fromDate).toISOString() : '',
+        toDate: toDate ? new Date(toDate).toISOString() : '',
+        employeeId,
+        expenseTypeId: expenseTypeId ? Number(expenseTypeId) : 0,
+      },
       { onSuccess: (data) => setRows(data) },
     );
   };
@@ -45,7 +54,7 @@ export const AdminReportPage = () => {
       ...rows.map((r) =>
         [
           r.expenseNo ?? '', r.employeeName ?? '', r.expenseType,
-          r.fromDate, r.toDate, r.amount, r.status,
+          r.fromDate, r.toDate, r.amount, resolveStatusLabel(r.status),
         ]
           .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
           .join(','),
@@ -72,9 +81,10 @@ export const AdminReportPage = () => {
       startY: fromDate || toDate ? 30 : 22,
       head: [['Expense No', 'Employee', 'Type', 'From', 'To', 'Amount', 'Status']],
       body: rows.map((r) => [
-        r.expenseNo ?? '', r.employeeName ?? '', r.expenseType,
+        r.expenseNo ?? '', r.employeeName ?? '', r.expenseType ?? '',
         formatDate(r.fromDate), formatDate(r.toDate),
-        formatCurrency(r.amount), r.status,
+        `Rs. ${Number(r.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        resolveStatusLabel(r.status),
       ]),
       styles: { fontSize: 8 },
       headStyles: { fillColor: [25, 118, 210] },
@@ -115,7 +125,7 @@ export const AdminReportPage = () => {
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid size={{ xs: 12, sm: 3 }}>
             <FormControl size="small" fullWidth>
               <InputLabel>Employee</InputLabel>
               <Select
@@ -141,6 +151,21 @@ export const AdminReportPage = () => {
                 <MenuItem value="">All Employees</MenuItem>
                 {filteredEmployees.map((e) => (
                   <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 3 }}>
+            <FormControl size="small" fullWidth>
+              <InputLabel>Expense Type</InputLabel>
+              <Select
+                value={expenseTypeId}
+                label="Expense Type"
+                onChange={(e) => setExpenseTypeId(String(e.target.value))}
+              >
+                <MenuItem value="">All Types</MenuItem>
+                {expenseTypes.map((t) => (
+                  <MenuItem key={t.id} value={String(t.id)}>{t.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>

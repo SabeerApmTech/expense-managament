@@ -6,6 +6,7 @@ export const MASTER_KEYS = {
   travelModes: ['master', 'travel-modes'] as const,
   payModes: ['master', 'pay-modes'] as const,
   expensePageLoad: ['master', 'expense-page-load'] as const,
+  statuses: ['master', 'expense-statuses'] as const,
 };
 
 export const useExpenseTypes = () =>
@@ -33,4 +34,11 @@ export const useExpensePageLoad = () =>
   useQuery({
     queryKey: MASTER_KEYS.expensePageLoad,
     queryFn: () => masterApi.getExpensePageLoad(),
+  });
+
+export const useExpenseStatuses = () =>
+  useQuery({
+    queryKey: MASTER_KEYS.statuses,
+    queryFn: () => masterApi.getExpenseStatuses(),
+    staleTime: 60 * 60 * 1000,
   });

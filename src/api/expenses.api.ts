@@ -7,34 +7,26 @@ export const expensesApi = {
     return response.data;
   },
 
-  getById: async (id: string): Promise<Expense> => {
-    const response = await apiClient.get<Expense>('/api/expense/expense/' + id);
-    return response.data;
-  },
-
   save: async (data: SaveExpenseRequest): Promise<Expense> => {
     const formData = new FormData();
     formData.append('Id', String(data.Id));
-    formData.append('ExpenseTypeId', String(data.ExpenseTypeId));
-    formData.append('Description', data.Description);
-    formData.append('FromDate', data.FromDate);
-    formData.append('ToDate', data.ToDate);
-    formData.append('Amount', String(data.Amount));
-    formData.append('PayModeId', String(data.PayModeId));
-    formData.append('TravelModeId', String(data.TravelModeId));
-    formData.append('AreaFrom', data.AreaFrom);
-    formData.append('AreaTo', data.AreaTo);
-    formData.append('InitiatedBy', data.InitiatedBy);
-    if (data.BillFile) {
-      formData.append('BillFile', data.BillFile);
-    }
+    formData.append('ItemsJson', data.ItemsJson);
+    (data.BillFiles ?? []).forEach((file) => formData.append('BillFiles', file));
     const response = await apiClient.post<Expense>('/api/expense/saveExpense', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': undefined },
     });
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete('/api/expense/expense/' + id);
+  },
+
+  initiatorApproveReject: async (payload: {
+    expenseId: number;
+    status: number; // 1 = approve, 2 = reject
+    reason?: string;
+  }): Promise<void> => {
+    await apiClient.post('/api/expense/approve-reject-expense', payload);
   },
 };

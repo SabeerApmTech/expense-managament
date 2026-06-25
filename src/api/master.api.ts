@@ -18,4 +18,9 @@ export const masterApi = {
     const response = await apiClient.get<ExpensePageLoad>('/api/expense/expense-page-load');
     return response.data;
   },
+
+  getExpenseStatuses: async (): Promise<{ id: number; name: string }[]> => {
+    const response = await apiClient.get<{ id: number; name: string }[]>('/api/enum/expenseentry-status');
+    return response.data;
+  },
 };

@@ -33,15 +33,29 @@ export const TRAVEL_MODES: SelectOption[] = [
   { value: 'Taxi', label: 'Taxi' },
 ];
 
+export const STATUS_ID_MAP: Record<number, string> = {
+  1: 'Submitted',
+  2: 'Initiated Approved',
+  3: 'Admin Approved',
+  4: 'Super Admin Approved',
+  5: 'Rejected',
+  6: 'Settled',
+};
+
 export const EXPENSE_STATUSES: SelectOption[] = [
-  { value: 'Submitted', label: 'Submitted' },
-  { value: 'Approved', label: 'Approved' },
-  { value: 'Rejected', label: 'Rejected' },
-  { value: 'Settled', label: 'Settled' },
+  { value: '1', label: 'Submitted' },
+  { value: '2', label: 'Initiated Approved' },
+  { value: '3', label: 'Admin Approved' },
+  { value: '4', label: 'Super Admin Approved' },
+  { value: '5', label: 'Rejected' },
+  { value: '6', label: 'Settled' },
 ];
 
 export const STATUS_COLORS: Record<string, 'warning' | 'success' | 'error' | 'info'> = {
   'Submitted': 'warning',
+  'Initiated Approved': 'warning',
+  'Admin Approved': 'success',
+  'Super Admin Approved': 'success',
   'Approved': 'success',
   'Approval': 'success',
   'Rejected': 'error',
@@ -49,6 +63,17 @@ export const STATUS_COLORS: Record<string, 'warning' | 'success' | 'error' | 'in
   'Settled': 'info',
   'Settle': 'info',
 };
+
+export const resolveStatusLabel = (status: string | number): string => {
+  const id = Number(status);
+  return !isNaN(id) && STATUS_ID_MAP[id] ? STATUS_ID_MAP[id] : String(status);
+};
+
+export const isSubmitted = (s: string | number) => s === 1 || s === 'Submitted';
+export const isApproved = (s: string | number) =>
+  [3, 4].includes(Number(s)) || ['Approved', 'Approved1', 'Approved2', 'Admin Approved', 'Super Admin Approved'].includes(String(s));
+export const isRejected = (s: string | number) => s === 5 || s === 'Rejected';
+export const isSettled = (s: string | number) => s === 6 || s === 'Settled';
 
 export const ROUTES = {
   LOGIN: '/login',
@@ -61,9 +86,9 @@ export const ROUTES = {
   ADMIN: {
     APPROVALS: '/admin/approvals',
     APPROVAL_DETAILS: '/admin/approvals/:id',
-    REPORTS: '/admin/reports',
+    REPORTS: '/reports',
   },
   SUPER_ADMIN: {
-    REPORTS: '/super-admin/reports',
+    REPORTS: '/reports',
   },
 } as const;

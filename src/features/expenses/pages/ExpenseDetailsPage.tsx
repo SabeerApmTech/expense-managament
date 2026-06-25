@@ -2,33 +2,25 @@ import {
   Box, Typography, Paper, Grid, Divider, Breadcrumbs, Link, Button,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useExpenseDetail } from '../hooks/useExpenses';
-import { LoadingState } from '../../../components/common/LoadingState';
-import { ErrorState } from '../../../components/common/ErrorState';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { StatusChip } from '../../../components/common/StatusChip';
+import { ErrorState } from '../../../components/common/ErrorState';
+import { Field } from '../../../components/common/Field';
+import { BillAttachments } from '../../../components/common/BillAttachments';
+import { BillViewerDialog } from '../../../components/common/BillViewerDialog';
+import { useExpenseLookupMaps } from '../hooks/useExpenseLookupMaps';
 import { formatDate, formatCurrency, formatDateTime } from '../../../utils/formatters';
-
-const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <Box>
-    <Typography
-      variant="caption"
-      color="text.secondary"
-      sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}
-    >
-      {label}
-    </Typography>
-    <Typography variant="body1" sx={{ mt: 0.25 }}>{value || '-'}</Typography>
-  </Box>
-);
+import type { Expense } from '../../../types/expense.types';
 
 export const ExpenseDetailsPage = () => {
-  const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError, refetch } = useExpenseDetail(id);
+  const location = useLocation();
+  const expense = location.state?.expense as Expense | undefined;
+  const { expTypeMap, payModeMap, travelModeMap } = useExpenseLookupMaps();
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
 
-  if (isLoading) return <LoadingState />;
-  if (isError || !data) return <ErrorState onRetry={refetch} />;
+  if (!expense) return <ErrorState message="Expense data not found." onRetry={() => navigate('/expenses')} />;
 
   return (
     <Box>
@@ -40,95 +32,83 @@ export const ExpenseDetailsPage = () => {
       </Breadcrumbs>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>Expense Details — {data.expenseNo}</Typography>
-        <StatusChip status={data.status} />
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>Expense Details — {expense.expenseNo}</Typography>
+        <StatusChip status={expense.status} />
       </Box>
 
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: 3, mb: 2 }}>
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Expense No" value={data.expenseNo} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Expense Type" value={data.expenseType} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Amount" value={formatCurrency(data.amount)} />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Divider />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Field label="Description" value={data.description} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="From Date" value={formatDate(data.fromDate)} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="To Date" value={formatDate(data.toDate)} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Pay Mode" value={data.payMode} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Travel Mode" value={data.travelMode} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="From Location" value={data.areaFrom} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="To Location" value={data.areaTo} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Initiated By" value={data.initiatedBy ?? data.createdBy} />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Field label="Submitted On" value={formatDateTime(data.submittedOn ?? data.createdDate ?? '')} />
-          </Grid>
-          {data.rejectReason && (
-            <Grid size={{ xs: 12 }}>
-              <Field label="Rejection Reason" value={data.rejectReason} />
-            </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Expense No" value={expense.expenseNo} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Employee" value={expense.employeeName} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Total Amount" value={formatCurrency(expense.amount)} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Initiated By" value={expense.initiatedBy} /></Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Submitted On" value={formatDateTime(expense.submittedOn ?? '')} /></Grid>
+          {expense.approvedBy && (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Approved By" value={expense.approvedBy} /></Grid>
           )}
-          {data.billUrl && (
-            <Grid size={{ xs: 12 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ fontWeight: 600, textTransform: 'uppercase', display: 'block' }}
-              >
-                Attachment
-              </Typography>
-              <Box sx={{ mt: 0.5 }}>
-                <Button variant="outlined" size="small" href={data.billUrl} target="_blank" rel="noreferrer">
-                  View Attachment
-                </Button>
-              </Box>
-            </Grid>
+          {expense.rejectedBy && (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Rejected By" value={expense.rejectedBy} /></Grid>
           )}
-          {data.settlementBillUrl && (
-            <Grid size={{ xs: 12 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ fontWeight: 600, textTransform: 'uppercase', display: 'block' }}
-              >
-                Settlement Proof
-              </Typography>
-              <Box sx={{ mt: 0.5 }}>
-                <Button variant="outlined" size="small" color="success" href={data.settlementBillUrl} target="_blank" rel="noreferrer">
-                  View Settlement Proof
-                </Button>
-              </Box>
-            </Grid>
+          {expense.rejectReason && (
+            <Grid size={{ xs: 12 }}><Field label="Rejection Reason" value={expense.rejectReason} /></Grid>
           )}
         </Grid>
-        <Box sx={{ mt: 3 }}>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/expenses')}>
-            Back to List
-          </Button>
-        </Box>
       </Paper>
+
+      {(expense.details ?? []).map((detail, i) => (
+        <Paper key={detail.id} sx={{ p: 3, mb: 2 }}>
+          {(expense.details?.length ?? 0) > 1 && (
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>Item #{i + 1}</Typography>
+          )}
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Field label="Expense Type" value={expTypeMap[detail.expenseTypeId] ?? String(detail.expenseTypeId)} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Field label="Amount" value={formatCurrency(detail.amount)} />
+            </Grid>
+            <Grid size={{ xs: 12 }}><Divider /></Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Field label="From Date" value={formatDate(detail.fromDate)} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Field label="To Date" value={formatDate(detail.toDate)} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Field label="Pay Mode" value={payModeMap[detail.payModeId] ?? String(detail.payModeId)} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Field label="Travel Mode" value={travelModeMap[detail.travelModeId] ?? String(detail.travelModeId)} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Field label="From Location" value={detail.areaFrom} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Field label="To Location" value={detail.areaTo} />
+            </Grid>
+            {detail.description && (
+              <Grid size={{ xs: 12 }}>
+                <Field label="Description" value={detail.description} />
+              </Grid>
+            )}
+            {detail.billUrl && (
+              <Grid size={{ xs: 12 }}>
+                <BillAttachments billUrl={detail.billUrl} onView={setViewerUrl} label="Attachments" />
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
+      ))}
+
+      <Box>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/expenses')}>
+          Back to List
+        </Button>
+      </Box>
+
+      {viewerUrl && (
+        <BillViewerDialog open={!!viewerUrl} url={viewerUrl} onClose={() => setViewerUrl(null)} />
+      )}
     </Box>
   );
 };

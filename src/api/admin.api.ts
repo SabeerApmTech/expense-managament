@@ -11,6 +11,7 @@ import type {
   DesignationLevelMap,
   Employee,
   DashboardData,
+  ApprovalLimit,
 } from '../types/expense.types';
 
 export const adminApi = {
@@ -26,7 +27,7 @@ export const adminApi = {
 
   approveRejectExpense: async (payload: {
     expenseId: number;
-    status: 2 | 3;
+    status: 3 | 4 | 5;
     reason: string;
   }): Promise<void> => {
     await apiClient.post('/api/expense/approve-reject-expense', payload);
@@ -41,9 +42,9 @@ export const adminApi = {
     formData.append('ExpenseId', String(data.expenseId));
     formData.append('SettlementBillFile', data.settlementBillFile);
     formData.append('Remarks', data.remarks);
-    formData.append('Status', '4');
+    formData.append('Status', '6');
     await apiClient.post('/api/expense/settle-expense', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': undefined },
     });
   },
 
@@ -187,6 +188,23 @@ export const adminApi = {
     return response.data;
   },
 
+  // ─── Approval Limits ────────────────────────────────────────────────────────
+  getApprovalLimits: async (): Promise<ApprovalLimit[]> => {
+    const response = await apiClient.get('/api/expense/approval-limit');
+    const data = response.data;
+    if (!data) return [];
+    if (Array.isArray(data)) return data as ApprovalLimit[];
+    return [data as ApprovalLimit];
+  },
+
+  saveApprovalLimit: async (payload: { id: number; initiatedLimit: number; adminLimit: number; superAdminLimit: number }): Promise<void> => {
+    await apiClient.post('/api/expense/approval-limit', payload);
+  },
+
+  deleteApprovalLimit: async (id: number): Promise<void> => {
+    await apiClient.delete('/api/expense/approval-limit/' + id);
+  },
+
   // ─── Dashboard ──────────────────────────────────────────────────────────────
   getDashboard: async (): Promise<DashboardData> => {
     const response = await apiClient.get<{ counts: DashboardData }>('/api/expense/dashboard');
@@ -198,6 +216,7 @@ export const adminApi = {
     fromDate: string;
     toDate: string;
     employeeId: string;
+    expenseTypeId: number;
   }): Promise<Expense[]> => {
     const response = await apiClient.post<Expense[]>('/api/expense/expensereport', payload);
     return response.data;

@@ -38,7 +38,9 @@ export const Header = ({ onMenuToggle, showMenuToggle = false }: Props) => {
           Expense Management
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" color="text.secondary">{roleLabel[role || ''] || ''}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {role === 'USER' ? user?.name : roleLabel[role || ''] || ''}
+          </Typography>
           <Tooltip title="Account">
             <IconButton onClick={(e) => setAnchor(e.currentTarget)} size="small">
               <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 12 }}>

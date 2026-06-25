@@ -20,7 +20,7 @@ export interface ApiUserPayload {
   id: string;
   name: string;
   email: string;
-  role: number;
+  role: number | string;
   designationId: number | null;
   designation: string | null;
   departmentId: number | null;

@@ -13,13 +13,15 @@ import { ExpenseFilters } from '../components/ExpenseFilters';
 import { ExpenseDrawer } from '../components/ExpenseDrawer';
 import type { DrawerMode } from '../components/ExpenseDrawer';
 import { useExpenseList, useDeleteExpense } from '../hooks/useExpenses';
+import { isSubmitted } from '../../../constants/masterData';
+import { getStoredAuth } from '../../../store/authStore';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import type { Expense, ExpenseFilters as IFilters } from '../../../types/expense.types';
 import type { Column } from '../../../types/common.types';
 
 interface DrawerState {
   mode: DrawerMode;
-  expenseId?: string;
+  expenseId?: string | number;
 }
 
 interface DeleteTarget {
@@ -35,43 +37,45 @@ export const ExpenseListPage = () => {
   const { data, isLoading, isError, refetch } = useExpenseList(filters);
   const deleteMutation = useDeleteExpense();
 
-  const openDrawer = (mode: DrawerMode, expenseId?: string) => setDrawer({ mode, expenseId });
+  // Always derive from live query data so drawer auto-updates after mutations
+  const drawerExpense = data?.data.find(e => e.id === drawer.expenseId);
+
+  const openDrawer = (mode: DrawerMode, expense?: Expense) => setDrawer({ mode, expenseId: expense?.id });
   const closeDrawer = () => setDrawer({ mode: null });
 
   const columns: Column<Expense>[] = [
-    { id: 'expenseType', label: 'Type', minWidth: 110, sortable: true },
-    { id: 'amount', label: 'Amount', minWidth: 110, align: 'right', sortable: true, render: (v) => formatCurrency(Number(v || 0)) },
-    { id: 'fromDate', label: 'From Date', minWidth: 100, render: (v) => formatDate(String(v || '')) },
-    { id: 'toDate', label: 'To Date', minWidth: 100, render: (v) => formatDate(String(v || '')) },
-    { id: 'areaFrom', label: 'From', minWidth: 100 },
-    { id: 'areaTo', label: 'To', minWidth: 100 },
-    { id: 'initiatedBy', label: 'Initiated By', minWidth: 130 },
-    { id: 'submittedOn', label: 'Submitted On', minWidth: 120, render: (v) => formatDate(String(v || '')) },
-    { id: 'status', label: 'Status', minWidth: 130, render: (v) => <StatusChip status={String(v || '')} /> },
+    { id: 'expenseNo', label: 'Expense No', minWidth: 130, sortable: true },
+    { id: 'amount', label: 'Total Amount', minWidth: 120, sortable: true, render: (v) => formatCurrency(Number(v || 0)) },
+    { id: 'submittedOn', label: 'Submitted On', minWidth: 130, render: (v) => formatDate(String(v || '')) },
+    { id: 'status', label: 'Status', minWidth: 140, render: (v) => <StatusChip status={v as number} /> },
   ];
 
-  const rowActions = (row: Expense & Record<string, unknown>): ActionItem[] => [
-    {
-      label: 'View',
-      icon: <VisibilityIcon fontSize="small" />,
-      onClick: () => openDrawer('view', String(row.id)),
-    },
-    ...(row.status === 'Submitted'
-      ? [
-          {
-            label: 'Edit',
-            icon: <EditIcon fontSize="small" />,
-            onClick: () => openDrawer('edit', String(row.id)),
-          },
-          {
-            label: 'Delete',
-            icon: <DeleteIcon fontSize="small" />,
-            color: 'error' as const,
-            onClick: () => setDeleteTarget({ id: String(row.id), expenseNo: String(row.expenseNo) }),
-          },
-        ]
-      : []),
-  ];
+  const rowActions = (row: Expense & Record<string, unknown>): ActionItem[] => {
+    const currentUserId = getStoredAuth()?.id ?? '';
+    const isOwner = row.employeeId === currentUserId;
+    return [
+      {
+        label: 'View',
+        icon: <VisibilityIcon fontSize="small" />,
+        onClick: () => openDrawer('view', row as Expense),
+      },
+      ...(isOwner && isSubmitted(row.status)
+        ? [
+            {
+              label: 'Edit',
+              icon: <EditIcon fontSize="small" />,
+              onClick: () => openDrawer('edit', row as Expense),
+            },
+            {
+              label: 'Delete',
+              icon: <DeleteIcon fontSize="small" />,
+              color: 'error' as const,
+              onClick: () => setDeleteTarget({ id: String(row.id), expenseNo: String(row.expenseNo) }),
+            },
+          ]
+        : []),
+    ];
+  };
 
   return (
     <Box>
@@ -95,7 +99,7 @@ export const ExpenseListPage = () => {
       />
 
       {/* Right-side Drawer for add / view / edit */}
-      <ExpenseDrawer mode={drawer.mode} expenseId={drawer.expenseId} onClose={closeDrawer} />
+      <ExpenseDrawer mode={drawer.mode} expense={drawerExpense} onClose={closeDrawer} />
 
       {/* Delete Confirmation Dialog */}
       <Dialog

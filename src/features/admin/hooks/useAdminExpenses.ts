@@ -21,6 +21,7 @@ export const useAdminExpenseList = (filters: AdminExpenseFilters = {}) => {
   return useQuery({
     queryKey: ADMIN_EXPENSE_KEYS.list(filters),
     queryFn: () => adminApi.listExpenses(params),
+    staleTime: 0,
   });
 };
 
@@ -34,11 +35,13 @@ export const useAdminExpenseDetail = (id: string) =>
 export const useApproveExpense = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ expenseId }: { expenseId: number }) =>
-      adminApi.approveRejectExpense({ expenseId, status: 2, reason: '' }),
+    mutationFn: ({ expenseId, status }: { expenseId: number; status: 3 | 4 }) =>
+      adminApi.approveRejectExpense({ expenseId, status, reason: '' }),
     onSuccess: (_, { expenseId }) => {
       queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.lists() });
       queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.detail(String(expenseId)) });
+      queryClient.invalidateQueries({ queryKey: ['expenses', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       enqueueSnackbar('Expense approved successfully', { variant: 'success' });
     },
     onError: () => enqueueSnackbar('Failed to approve expense', { variant: 'error' }),
@@ -49,10 +52,12 @@ export const useRejectExpense = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ expenseId, reason }: { expenseId: number; reason: string }) =>
-      adminApi.approveRejectExpense({ expenseId, status: 3, reason }),
+      adminApi.approveRejectExpense({ expenseId, status: 5, reason }),
     onSuccess: (_, { expenseId }) => {
       queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.lists() });
       queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.detail(String(expenseId)) });
+      queryClient.invalidateQueries({ queryKey: ['expenses', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       enqueueSnackbar('Expense rejected', { variant: 'info' });
     },
     onError: () => enqueueSnackbar('Failed to reject expense', { variant: 'error' }),
@@ -70,6 +75,8 @@ export const useSettleExpense = () => {
     onSuccess: (_, { expenseId }) => {
       queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.lists() });
       queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.detail(String(expenseId)) });
+      queryClient.invalidateQueries({ queryKey: ['expenses', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       enqueueSnackbar('Expense marked as settled', { variant: 'success' });
     },
     onError: () => enqueueSnackbar('Failed to settle expense', { variant: 'error' }),
@@ -78,7 +85,7 @@ export const useSettleExpense = () => {
 
 export const useExpenseReport = () =>
   useMutation({
-    mutationFn: (payload: { fromDate: string; toDate: string; employeeId: string }) =>
+    mutationFn: (payload: { fromDate: string; toDate: string; employeeId: string; expenseTypeId: number }) =>
       adminApi.getExpenseReport(payload),
     onError: () => enqueueSnackbar('Failed to generate report', { variant: 'error' }),
   });
