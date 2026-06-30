@@ -1,6 +1,6 @@
 import {
   Grid, Button, Box, CircularProgress, Typography, TextField,
-  Paper, IconButton, Divider, Autocomplete,
+  Paper, IconButton, Divider, Autocomplete, Alert,
 } from '@mui/material';
 import { FormProvider, useForm, useFieldArray, Controller, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -166,6 +166,161 @@ const AmountField = ({ index, expenseTypeOptions }: AmountFieldProps) => {
   );
 };
 
+// ─── Per-item category alert ──────────────────────────────────────────────────
+
+type ExpTypeOption = SelectOption & { fromRange?: number; toRange?: number };
+
+const CATEGORY_MESSAGES: Record<string, string> = {
+  travel:
+    'Travel expenses are reimbursable only for official trips conducted outside your home state on company business. Personal travel is not eligible for reimbursement.',
+  food:
+    'Food expenses are reimbursable only when incurred during official company-related activities or business engagements. Personal meals and social occasions are not covered.',
+  office:
+    'Office materials are reimbursable only when purchased on behalf of the company for official use. Please retain all original receipts as proof of purchase.',
+  stationery:
+    'Stationery items are reimbursable only when procured on behalf of the company for official purposes. Personal stationery purchases are not eligible.',
+};
+
+const DEFAULT_CATEGORY_MESSAGE =
+  'This expense is reimbursable only when incurred strictly for official company-related purposes. Personal expenses of any nature are not eligible for reimbursement.';
+
+interface CategoryAlertProps { index: number; expenseTypeOptions: ExpTypeOption[]; }
+
+const CategoryAlert = ({ index, expenseTypeOptions }: CategoryAlertProps) => {
+  const { watch } = useFormContext<ExpenseFormValues>();
+  const expenseTypeId = watch(`items.${index}.expenseTypeId`);
+  if (!expenseTypeId) return null;
+  const label = (expenseTypeOptions.find(o => o.value === expenseTypeId)?.label ?? '').toLowerCase();
+  const message = CATEGORY_MESSAGES[label] ?? DEFAULT_CATEGORY_MESSAGE;
+  return (
+    <Alert severity="info" sx={{ mb: 0.5, py: 0.5, fontSize: 13 }}>
+      {message}
+    </Alert>
+  );
+};
+
+// ─── Per-item card (needs own hooks for conditional rendering) ────────────────
+
+interface ExpenseItemCardProps {
+  index: number;
+  expenseTypeOptions: ExpTypeOption[];
+  payModeOptions: SelectOption[];
+  travelModeOptions: SelectOption[];
+  employees: { id: string; name: string }[];
+  loadingTypes: boolean;
+  loadingPay: boolean;
+  loadingTravel: boolean;
+  loadingDesignationExpenseMaps: boolean;
+  existingBillUrl?: string | null;
+  onRemove?: () => void;
+  showRemove: boolean;
+}
+
+const ExpenseItemCard = ({
+  index, expenseTypeOptions, payModeOptions, travelModeOptions, employees,
+  loadingTypes, loadingPay, loadingTravel, loadingDesignationExpenseMaps,
+  existingBillUrl, onRemove, showRemove,
+}: ExpenseItemCardProps) => {
+  const { control, watch } = useFormContext<ExpenseFormValues>();
+  const expenseTypeId = watch(`items.${index}.expenseTypeId`);
+  const fromDate = watch(`items.${index}.fromDate`);
+  const categoryLabel = (expenseTypeOptions.find(o => o.value === expenseTypeId)?.label ?? '').toLowerCase();
+  const isTravel = categoryLabel === 'travel';
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2.5, mb: 2, borderRadius: 2, position: 'relative' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          Expense Item {showRemove ? `#${index + 1}` : ''}
+        </Typography>
+        {showRemove && (
+          <IconButton size="small" color="error" onClick={onRemove}>
+            <DeleteForeverIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Box>
+
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Controller
+            name={`items.${index}.initiatedBy`}
+            control={control}
+            render={({ field, fieldState }) => (
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5, color: 'text.primary' }}>
+                  Initiated By<Box component="span" sx={{ color: 'error.main', ml: 0.25 }}>*</Box>
+                </Typography>
+                <Autocomplete
+                  options={employees}
+                  getOptionLabel={(o) => o.name}
+                  isOptionEqualToValue={(o, v) => o.id === v.id}
+                  value={employees.find(e => e.id === field.value) ?? null}
+                  onChange={(_, v) => field.onChange(v?.id ?? '')}
+                  renderInput={(params) => (
+                    <TextField {...params} size="small" hiddenLabel placeholder="Select Employee"
+                      error={!!fieldState.error} helperText={fieldState.error?.message} />
+                  )}
+                />
+              </Box>
+            )}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormSelect name={`items.${index}.expenseTypeId`} label="Category"
+            options={expenseTypeOptions} disabled={loadingTypes || loadingDesignationExpenseMaps} required />
+        </Grid>
+        {expenseTypeId && (
+          <Grid size={{ xs: 12 }}>
+            <CategoryAlert index={index} expenseTypeOptions={expenseTypeOptions} />
+          </Grid>
+        )}
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <AmountField index={index} expenseTypeOptions={expenseTypeOptions} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormDatePicker name={`items.${index}.fromDate`} label="From Date" required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormDatePicker name={`items.${index}.toDate`} label="To Date" required minDate={fromDate || undefined} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormSelect name={`items.${index}.payModeId`} label="Pay Mode" options={payModeOptions} disabled={loadingPay} required />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormSelect
+            name={`items.${index}.travelModeId`}
+            label={isTravel ? 'Travel Mode *' : 'Travel Mode'}
+            options={travelModeOptions}
+            disabled={loadingTravel}
+            required={isTravel}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormTextField
+            name={`items.${index}.areaFrom`}
+            label={isTravel ? 'From Location *' : 'From Location'}
+            required={isTravel}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormTextField
+            name={`items.${index}.areaTo`}
+            label={isTravel ? 'To Location *' : 'To Location'}
+            required={isTravel}
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormTextField name={`items.${index}.description`} label="Description" multiline rows={2} />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <Divider sx={{ mb: 1 }} />
+          <ItemFileUpload index={index} existingBillUrl={existingBillUrl} />
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+};
+
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmitting, onCancel }: Props) => {
@@ -247,6 +402,24 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
       }
 
       const typeOption = expenseTypeOptions.find(o => o.value === item.expenseTypeId);
+      const categoryLabel = (typeOption?.label ?? '').toLowerCase();
+      const isTravel = categoryLabel === 'travel';
+
+      if (isTravel) {
+        if (!item.travelModeId) {
+          methods.setError(`items.${index}.travelModeId`, { type: 'manual', message: 'Travel mode is required for travel expenses' });
+          hasError = true;
+        }
+        if (!item.areaFrom?.trim()) {
+          methods.setError(`items.${index}.areaFrom`, { type: 'manual', message: 'From location is required for travel expenses' });
+          hasError = true;
+        }
+        if (!item.areaTo?.trim()) {
+          methods.setError(`items.${index}.areaTo`, { type: 'manual', message: 'To location is required for travel expenses' });
+          hasError = true;
+        }
+      }
+
       if (typeOption?.toRange == null) return;
 
       const combinedTotal = totalsByType[item.expenseTypeId] ?? 0;
@@ -269,97 +442,21 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
 
         {/* Expense Items */}
         {fields.map((field, index) => (
-          <Paper
+          <ExpenseItemCard
             key={field.id}
-            variant="outlined"
-            sx={{ p: 2.5, mb: 2, borderRadius: 2, position: 'relative' }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                Expense Item {fields.length > 1 ? `#${index + 1}` : ''}
-              </Typography>
-              {fields.length > 1 && (
-                <IconButton size="small" color="error" onClick={() => remove(index)}>
-                  <DeleteForeverIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <Controller
-                  name={`items.${index}.initiatedBy`}
-                  control={methods.control}
-                  render={({ field, fieldState }) => (
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5, color: 'text.primary' }}>
-                        Initiated By<Box component="span" sx={{ color: 'error.main', ml: 0.25 }}>*</Box>
-                      </Typography>
-                      <Autocomplete
-                        options={employees}
-                        getOptionLabel={(o) => o.name}
-                        isOptionEqualToValue={(o, v) => o.id === v.id}
-                        value={employees.find(e => e.id === field.value) ?? null}
-                        onChange={(_, v) => field.onChange(v?.id ?? '')}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            size="small"
-                            hiddenLabel
-                            placeholder="Select Employee"
-                            error={!!fieldState.error}
-                            helperText={fieldState.error?.message}
-                          />
-                        )}
-                      />
-                    </Box>
-                  )}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormSelect
-                  name={`items.${index}.expenseTypeId`}
-                  label="Category"
-                  options={expenseTypeOptions}
-                  disabled={loadingTypes || loadingDesignationExpenseMaps}
-                  required
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <AmountField index={index} expenseTypeOptions={expenseTypeOptions} />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormDatePicker name={`items.${index}.fromDate`} label="From Date" required />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormDatePicker
-                  name={`items.${index}.toDate`}
-                  label="To Date"
-                  required
-                  minDate={methods.watch(`items.${index}.fromDate`) || undefined}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormSelect name={`items.${index}.payModeId`} label="Pay Mode" options={payModeOptions} disabled={loadingPay} required />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormSelect name={`items.${index}.travelModeId`} label="Travel Mode" options={travelModeOptions} disabled={loadingTravel} />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormTextField name={`items.${index}.areaFrom`} label="From Location" required />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormTextField name={`items.${index}.areaTo`} label="To Location" required />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <FormTextField name={`items.${index}.description`} label="Description" multiline rows={2} />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <Divider sx={{ mb: 1 }} />
-                <ItemFileUpload index={index} existingBillUrl={existingBillUrls?.[index]} />
-              </Grid>
-            </Grid>
-          </Paper>
+            index={index}
+            expenseTypeOptions={expenseTypeOptions}
+            payModeOptions={payModeOptions}
+            travelModeOptions={travelModeOptions}
+            employees={employees}
+            loadingTypes={loadingTypes}
+            loadingPay={loadingPay}
+            loadingTravel={loadingTravel}
+            loadingDesignationExpenseMaps={loadingDesignationExpenseMaps}
+            existingBillUrl={existingBillUrls?.[index]}
+            onRemove={() => remove(index)}
+            showRemove={fields.length > 1}
+          />
         ))}
 
         <Button

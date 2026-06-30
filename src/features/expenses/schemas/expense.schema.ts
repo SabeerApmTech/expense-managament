@@ -9,8 +9,8 @@ export const expenseItemSchema = z.object({
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
   payModeId: z.string().min(1, 'Pay mode is required'),
   travelModeId: z.string(),
-  areaFrom: z.string().min(1, 'From location is required'),
-  areaTo: z.string().min(1, 'To location is required'),
+  areaFrom: z.string(),
+  areaTo: z.string(),
   billFiles: z.array(z.any()),
 }).refine(
   (data) => !data.fromDate || !data.toDate || data.toDate >= data.fromDate,

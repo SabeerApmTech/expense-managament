@@ -7,7 +7,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import { EXPENSE_STATUSES } from '../../../constants/masterData';
-import { useExpenseTypes } from '../hooks/useMasterData';
+import { useExpensePageLoad } from '../hooks/useMasterData';
+import { useDesignationExpenseMaps } from '../../admin/hooks/useAdminMaster';
 import type { ExpenseFilters as IFilters } from '../../../types/expense.types';
 
 interface Props {
@@ -35,7 +36,15 @@ export const ExpenseFilters = ({ onFilter }: Props) => {
   const [toDate, setToDate] = useState('');
   const [status, setStatus] = useState('');
   const [expenseType, setExpenseType] = useState('');
-  const { data: expenseTypes = [] } = useExpenseTypes();
+
+  const { data: pageLoad } = useExpensePageLoad();
+  const { data: designationExpenseMaps = [] } = useDesignationExpenseMaps();
+
+  const userDesignationId = pageLoad?.designationId;
+  const userExpenseMaps = designationExpenseMaps.filter(m => m.designationId === userDesignationId);
+  const mappedExpenseTypeIds = new Set(userExpenseMaps.map(m => m.expenseTypeId));
+
+  const expenseTypes = (pageLoad?.expenseTypes ?? []).filter(t => mappedExpenseTypeIds.has(t.expenseTypeId));
 
   const handleFetch = () => onFilter({ fromDate, toDate, status, expenseType });
   const handleReset = () => {
@@ -92,7 +101,7 @@ export const ExpenseFilters = ({ onFilter }: Props) => {
             >
               <MenuItem value="">All Types</MenuItem>
               {expenseTypes.map((t) => (
-                <MenuItem key={t.id} value={String(t.id)}>{t.name}</MenuItem>
+                <MenuItem key={t.expenseTypeId} value={String(t.expenseTypeId)}>{t.expenseTypeName}</MenuItem>
               ))}
             </Select>
           </Grid>
