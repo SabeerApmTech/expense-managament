@@ -12,6 +12,7 @@ import { useExpenseTypes } from '../../expenses/hooks/useMasterData';
 import { useSaveExpenseType, useDeleteExpenseType } from '../hooks/useAdminMaster';
 import { ManagedItemDialog } from '../../../components/common/ManagedItemDialog';
 import { DeleteConfirmDialog } from '../../../components/common/DeleteConfirmDialog';
+import { useAuthContext } from '../../../store/authStore';
 
 interface Props { open: boolean; onClose: () => void; asPanel?: boolean; }
 
@@ -21,7 +22,8 @@ export const ExpenseTypeManagementDialog = ({ open, onClose, asPanel = false }: 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; name: string } | null>(null);
 
-  const { data: expenseTypes = [] } = useExpenseTypes();
+  const { data: expenseTypes = [], isLoading } = useExpenseTypes();
+  const { user } = useAuthContext();
   const { mutate: save, isPending: saving } = useSaveExpenseType();
   const { mutate: remove, isPending: deleting } = useDeleteExpenseType();
 
@@ -35,7 +37,16 @@ export const ExpenseTypeManagementDialog = ({ open, onClose, asPanel = false }: 
 
   const handleSave = () => {
     if (!name.trim()) { setNameError('Name is required'); return; }
-    save({ id: editingId ?? 0, name: name.trim() }, { onSuccess: resetForm });
+    const now = new Date().toISOString();
+    const existing = expenseTypes.find((type) => type.id === editingId);
+    save({
+      id: editingId ?? 0,
+      name: name.trim(),
+      createdBy: existing?.createdBy || user?.id || '',
+      createdDate: existing?.createdDate || now,
+      updatedBy: user?.id || '',
+      updatedDate: now,
+    }, { onSuccess: resetForm });
   };
 
   const formSection = (
@@ -65,15 +76,20 @@ export const ExpenseTypeManagementDialog = ({ open, onClose, asPanel = false }: 
   );
 
   const listSection = (
-    <Box sx={{ overflowY: 'auto', flex: 1, px: 3, pb: 2 }}>
+    <Box sx={{ px: 3, pb: 2 }}>
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : (
+      <>
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
         Existing Types ({expenseTypes.length})
       </Typography>
       {expenseTypes.length === 0 ? (
         <Typography variant="caption" color="text.secondary">No expense types added yet</Typography>
       ) : (
-        <Box sx={{ overflowX: 'auto' }}>
-          <Table size="small" sx={{ minWidth: 300 }}>
+        <Table size="small" stickyHeader sx={{ minWidth: 300 }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
@@ -96,7 +112,8 @@ export const ExpenseTypeManagementDialog = ({ open, onClose, asPanel = false }: 
               ))}
             </TableBody>
           </Table>
-        </Box>
+      )}
+      </>
       )}
     </Box>
   );

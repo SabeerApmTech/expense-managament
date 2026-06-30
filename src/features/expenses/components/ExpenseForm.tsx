@@ -13,7 +13,7 @@ import { FormSelect } from '../../../components/forms/FormSelect';
 import { FormDatePicker } from '../../../components/forms/FormDatePicker';
 import { FormTextField } from '../../../components/forms/FormTextField';
 import { useExpenseTypes, usePayModes, useTravelModes, useExpensePageLoad } from '../hooks/useMasterData';
-import { useEmployees } from '../../admin/hooks/useAdminMaster';
+import { useDesignationExpenseMaps, useDesignationTravelMaps, useEmployees } from '../../admin/hooks/useAdminMaster';
 import { getStoredAuth } from '../../../store/authStore';
 import { expenseSchema, type ExpenseFormValues } from '../schemas/expense.schema';
 import type { SelectOption } from '../../../types/common.types';
@@ -48,8 +48,10 @@ interface ItemFileUploadProps {
 }
 
 const ItemFileUpload = ({ index, existingBillUrl }: ItemFileUploadProps) => {
-  const { setValue, watch } = useFormContext<ExpenseFormValues>();
+  const { setValue, watch, formState: { errors } } = useFormContext<ExpenseFormValues>();
   const files: File[] = watch(`items.${index}.billFiles`) ?? [];
+  const billError = (errors.items?.[index] as { billFiles?: { message?: string } })?.billFiles?.message;
+  const amount = watch(`items.${index}.amount`) ?? 0;
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,9 +101,20 @@ const ItemFileUpload = ({ index, existingBillUrl }: ItemFileUploadProps) => {
       <Button
         variant="outlined" size="small" startIcon={<AttachFileIcon />}
         onClick={() => inputRef.current?.click()}
+        color={billError ? 'error' : 'primary'}
       >
-        {files.length || existingBillUrl ? 'Add More Bills' : 'Upload Bill'}
+        {files.length || existingBillUrl ? 'Add More Bills' : 'Upload Bill *'}
       </Button>
+      {billError && (
+        <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'error.main' }}>
+          {billError}
+        </Typography>
+      )}
+      {amount > 5000 && (
+        <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: 'warning.main', fontWeight: 500 }}>
+          Upload GST if amount exceeds Rs 5000
+        </Typography>
+      )}
     </Box>
   );
 };
@@ -160,22 +173,50 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
   const { data: expenseTypes = [], isLoading: loadingTypes } = useExpenseTypes();
   const { data: payModes = [], isLoading: loadingPay } = usePayModes();
   const { data: travelModes = [], isLoading: loadingTravel } = useTravelModes();
+  const { data: designationExpenseMaps = [], isLoading: loadingDesignationExpenseMaps } = useDesignationExpenseMaps();
+  const { data: designationTravelMaps = [] } = useDesignationTravelMaps();
   const { data: allEmployees = [] } = useEmployees();
 
   const currentUserId = getStoredAuth()?.id;
   const employees = allEmployees.filter(e => e.id !== currentUserId);
 
+  const userDesignationId = pageLoad?.designationId;
+
+  const userExpenseMaps = designationExpenseMaps.filter(m => m.designationId === userDesignationId);
+  const mappedExpenseTypeIds = new Set(userExpenseMaps.map(m => m.expenseTypeId));
+
   const expenseTypeOptions: (SelectOption & { fromRange?: number; toRange?: number })[] = pageLoad?.expenseTypes.length
-    ? pageLoad.expenseTypes.map(t => ({ value: String(t.expenseTypeId), label: t.expenseTypeName, fromRange: t.fromRange, toRange: t.toRange }))
-    : expenseTypes.map(t => ({ value: String(t.id), label: t.name }));
+    ? pageLoad.expenseTypes
+      .filter(t => mappedExpenseTypeIds.has(t.expenseTypeId))
+      .map(t => {
+        const map = userExpenseMaps.find(m => m.expenseTypeId === t.expenseTypeId);
+        return { value: String(t.expenseTypeId), label: t.expenseTypeName, fromRange: map?.amountRangeFrom, toRange: map?.amountRangeTo };
+      })
+    : expenseTypes
+      .filter(t => mappedExpenseTypeIds.has(t.id))
+      .map(t => {
+        const map = userExpenseMaps.find(m => m.expenseTypeId === t.id);
+        return { value: String(t.id), label: t.name, fromRange: map?.amountRangeFrom, toRange: map?.amountRangeTo };
+      });
+
+  const userTravelMaps = designationTravelMaps.filter(m => m.designationId === userDesignationId);
+  const mappedTravelModeIds = new Set(
+    userTravelMaps.flatMap(m =>
+      m.travelModeId.toString().split(',').map(id => Number(id.trim())).filter(Boolean)
+    )
+  );
 
   const payModeOptions: SelectOption[] = pageLoad?.paymentModes.length
     ? pageLoad.paymentModes.map(p => ({ value: String(p.paymentModeId), label: p.paymentModeName }))
     : payModes.map(p => ({ value: String(p.id), label: p.name }));
 
   const travelModeOptions: SelectOption[] = pageLoad?.travelModes.length
-    ? pageLoad.travelModes.map(t => ({ value: String(t.travelModeId), label: t.travelModeName }))
-    : travelModes.map(t => ({ value: String(t.id), label: t.name }));
+    ? pageLoad.travelModes
+        .filter(t => mappedTravelModeIds.has(t.travelModeId))
+        .map(t => ({ value: String(t.travelModeId), label: t.travelModeName }))
+    : travelModes
+        .filter(t => mappedTravelModeIds.has(t.id))
+        .map(t => ({ value: String(t.id), label: t.name }));
 
   const methods = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -190,9 +231,41 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
     name: 'items',
   });
 
+  const handleValidatedSubmit = (values: ExpenseFormValues) => {
+    // Sum amounts per expense type across all items in this submission
+    const totalsByType: Record<string, number> = {};
+    values.items.forEach(item => {
+      totalsByType[item.expenseTypeId] = (totalsByType[item.expenseTypeId] ?? 0) + item.amount;
+    });
+
+    let hasError = false;
+    values.items.forEach((item, index) => {
+      // Bill upload required unless an existing bill already covers this item
+      if (item.billFiles.length === 0 && !existingBillUrls?.[index]) {
+        methods.setError(`items.${index}.billFiles` as never, { type: 'manual', message: 'Please upload a bill' });
+        hasError = true;
+      }
+
+      const typeOption = expenseTypeOptions.find(o => o.value === item.expenseTypeId);
+      if (typeOption?.toRange == null) return;
+
+      const combinedTotal = totalsByType[item.expenseTypeId] ?? 0;
+      if (combinedTotal > typeOption.toRange) {
+        const isMultiple = values.items.filter(i => i.expenseTypeId === item.expenseTypeId).length > 1;
+        const msg = isMultiple
+          ? `Combined total for "${typeOption.label}" (₹${combinedTotal.toLocaleString('en-IN')}) exceeds the limit of ₹${typeOption.toRange.toLocaleString('en-IN')}`
+          : `Amount exceeds the limit of ₹${typeOption.toRange.toLocaleString('en-IN')} for "${typeOption.label}"`;
+        methods.setError(`items.${index}.amount`, { type: 'manual', message: msg });
+        hasError = true;
+      }
+    });
+
+    if (!hasError) onSubmit(values);
+  };
+
   return (
     <FormProvider {...methods}>
-      <Box component="form" onSubmit={methods.handleSubmit(onSubmit)} noValidate>
+      <Box component="form" onSubmit={methods.handleSubmit(handleValidatedSubmit)} noValidate>
 
         {/* Expense Items */}
         {fields.map((field, index) => (
@@ -246,9 +319,9 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormSelect
                   name={`items.${index}.expenseTypeId`}
-                  label="Expense Type"
+                  label="Category"
                   options={expenseTypeOptions}
-                  disabled={loadingTypes}
+                  disabled={loadingTypes || loadingDesignationExpenseMaps}
                   required
                 />
               </Grid>
@@ -270,7 +343,7 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
                 <FormSelect name={`items.${index}.payModeId`} label="Pay Mode" options={payModeOptions} disabled={loadingPay} required />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FormSelect name={`items.${index}.travelModeId`} label="Travel Mode" options={travelModeOptions} disabled={loadingTravel} required />
+                <FormSelect name={`items.${index}.travelModeId`} label="Travel Mode" options={travelModeOptions} disabled={loadingTravel} />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormTextField name={`items.${index}.areaFrom`} label="From Location" required />

@@ -51,8 +51,8 @@ export const TravelPayModeDialog = ({ open, onClose, asPanel = false }: Props) =
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; name: string } | null>(null);
   const { user } = useAuthContext();
-  const { data: travelModes = [] } = useTravelModes();
-  const { data: payModes = [] } = usePayModes();
+  const { data: travelModes = [], isLoading: loadingTravel } = useTravelModes();
+  const { data: payModes = [], isLoading: loadingPay } = usePayModes();
   const { mutate: save, isPending: saving } = useSaveTravelPayMode();
   const { mutate: remove, isPending: deleting } = useDeleteTravelPayMode();
 
@@ -104,7 +104,12 @@ export const TravelPayModeDialog = ({ open, onClose, asPanel = false }: Props) =
   );
 
   const listSection = (
-    <Box sx={{ overflowY: 'auto', flex: 1, px: 3, pb: 2 }}>
+    <Box sx={{ overflowY: 'auto', flex: 1, minHeight: 0, px: 3, pb: 2 }}>
+      {(loadingTravel || loadingPay) ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : (
       <Box sx={{ display: 'flex', gap: 3 }}>
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
@@ -122,6 +127,7 @@ export const TravelPayModeDialog = ({ open, onClose, asPanel = false }: Props) =
           <ModeList modes={payModes} travel={false} onEdit={handleEdit} onDelete={setDeleteConfirm} />
         </Box>
       </Box>
+      )}
     </Box>
   );
 

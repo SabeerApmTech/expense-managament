@@ -38,6 +38,13 @@ export const useSaveDesignationExpenseMap = () =>
     { success: 'Saved successfully', error: 'Failed to save' },
   );
 
+export const useDeleteDesignationExpenseMap = () =>
+  useManagedMutation(
+    adminApi.deleteDesignationExpenseMap,
+    [ADMIN_MASTER_KEYS.designationExpenseMaps],
+    { success: 'Deleted successfully', error: 'Failed to delete' },
+  );
+
 export const useDesignationTravelMaps = () =>
   useQuery({
     queryKey: ADMIN_MASTER_KEYS.designationTravelMaps,

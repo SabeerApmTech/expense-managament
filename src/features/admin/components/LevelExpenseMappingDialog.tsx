@@ -25,10 +25,11 @@ export const LevelExpenseMappingDialog = ({ open, onClose, asPanel = false }: Pr
   const [errors, setErrors] = useState<Partial<typeof EMPTY>>({});
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [levelFilter, setLevelFilter] = useState('');
 
   const { data: levels = [] } = useLevels();
   const { data: expenseTypes = [] } = useExpenseTypes();
-  const { data: maps = [] } = useExpenseLevelMaps();
+  const { data: maps = [], isLoading } = useExpenseLevelMaps();
   const { mutate: saveMap, isPending: isSaving } = useSaveExpenseLevelMap();
   const { mutate: updateMap, isPending: isUpdating } = useUpdateExpenseLevelMap();
   const { mutate: deleteMap, isPending: isDeleting } = useDeleteExpenseLevelMap();
@@ -43,6 +44,10 @@ export const LevelExpenseMappingDialog = ({ open, onClose, asPanel = false }: Pr
       .filter((id): id is number => id !== undefined)
   );
   const availableExpenseTypes = expenseTypes.filter(t => !alreadyMappedExpenseIds.has(t.id));
+  const selectedFilterLevelName = levels.find(l => l.id === Number(levelFilter))?.name;
+  const filteredMaps = selectedFilterLevelName
+    ? maps.filter(m => m.level === selectedFilterLevelName)
+    : maps;
 
   const validate = () => {
     const e: Partial<typeof EMPTY> = {};
@@ -131,44 +136,66 @@ export const LevelExpenseMappingDialog = ({ open, onClose, asPanel = false }: Pr
   );
 
   const listSection = (
-    <Box sx={{ overflowY: 'auto', flex: 1, px: 3, pb: 2 }}>
-      {maps.length > 0 && (
+    <Box sx={{ px: 3, pb: 2 }}>
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : maps.length > 0 && (
         <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Existing Mappings</Typography>
-          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-            <Box sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 480 }}>
-                <TableHead sx={{ bgcolor: 'grey.50' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Level</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Expense Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">From</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">To</TableCell>
-                    <TableCell sx={{ fontWeight: 600, width: 80 }} align="right">Actions</TableCell>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1, flexWrap: 'wrap' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Existing Mappings</Typography>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <Select
+                displayEmpty
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(String(e.target.value))}
+                sx={{ height: 32, fontSize: 13 }}
+              >
+                <MenuItem value=""><em>All Levels</em></MenuItem>
+                {levels.map(level => <MenuItem key={level.id} value={String(level.id)}>{level.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Box>
+          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Table size="small" stickyHeader sx={{ minWidth: 480 }}>
+              <TableHead sx={{ bgcolor: 'grey.50' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Level</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Expense Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="right">From</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="right">To</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 80 }} align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredMaps.map(m => (
+                  <TableRow key={m.id} hover selected={editingId === m.id}>
+                    <TableCell>{m.level}</TableCell>
+                    <TableCell>{m.expenseType}</TableCell>
+                    <TableCell align="right">{formatCurrency(m.fromRange)}</TableCell>
+                    <TableCell align="right">{formatCurrency(m.toRange)}</TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                        <IconButton size="small" color="primary" onClick={() => handleStartEdit(m)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" color="error" onClick={() => setDeleteTargetId(m.id)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {maps.map(m => (
-                    <TableRow key={m.id} hover selected={editingId === m.id}>
-                      <TableCell>{m.level}</TableCell>
-                      <TableCell>{m.expenseType}</TableCell>
-                      <TableCell align="right">{formatCurrency(m.fromRange)}</TableCell>
-                      <TableCell align="right">{formatCurrency(m.toRange)}</TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                          <IconButton size="small" color="primary" onClick={() => handleStartEdit(m)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton size="small" color="error" onClick={() => setDeleteTargetId(m.id)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
+                ))}
+                {filteredMaps.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ color: 'text.secondary', py: 2 }}>
+                      No mappings found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </Box>
         </Box>
       )}

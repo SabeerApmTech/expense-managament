@@ -76,12 +76,16 @@ export const adminApi = {
     await apiClient.post('/api/expense/designation-expense-map', payload);
   },
 
+  deleteDesignationExpenseMap: async (id: number): Promise<void> => {
+    await apiClient.delete('/api/expense/designation-expense-map/' + id);
+  },
+
   getDesignationTravelMaps: async (): Promise<DesignationTravelMap[]> => {
     const response = await apiClient.get<DesignationTravelMap[]>('/api/expense/designation-travel-map');
     return response.data;
   },
 
-  saveDesignationTravelMap: async (payload: DesignationTravelMap): Promise<void> => {
+  saveDesignationTravelMap: async (payload: { id: number; designationId: number; travelModeIds: number[] }): Promise<void> => {
     await apiClient.post('/api/expense/designation-travel-map', payload);
   },
 
@@ -223,7 +227,14 @@ export const adminApi = {
   },
 
   // ─── Expense Type Management ─────────────────────────────────────────────────
-  saveExpenseType: async (payload: { id: number; name: string }): Promise<void> => {
+  saveExpenseType: async (payload: {
+    id: number;
+    name: string;
+    createdBy: string;
+    createdDate: string;
+    updatedBy: string;
+    updatedDate: string;
+  }): Promise<void> => {
     await apiClient.post('/api/expense/saveExpenseType', payload);
   },
 

@@ -21,7 +21,7 @@ export const LevelManagementDialog = ({ open, onClose, asPanel = false }: Props)
   const [editName, setEditName] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
-  const { data: levels = [] } = useLevels();
+  const { data: levels = [], isLoading } = useLevels();
   const { mutate: saveLevel, isPending: isSaving } = useSaveLevel();
   const { mutate: updateLevel, isPending: isUpdating } = useUpdateLevel();
   const { mutate: deleteLevel, isPending: isDeleting } = useDeleteLevel();
@@ -56,12 +56,16 @@ export const LevelManagementDialog = ({ open, onClose, asPanel = false }: Props)
   );
 
   const listSection = (
-    <Box sx={{ overflowY: 'auto', flex: 1, px: 3, pb: 2 }}>
-      {levels.length > 0 && (
+    <Box sx={{ px: 3, pb: 2 }}>
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : levels.length > 0 && (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Existing Levels</Typography>
-          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-            <Table size="small">
+          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Table size="small" stickyHeader>
               <TableHead sx={{ bgcolor: 'grey.50' }}>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>

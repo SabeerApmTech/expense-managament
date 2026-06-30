@@ -26,7 +26,7 @@ export const LevelDesignationMappingDialog = ({ open, onClose, asPanel = false }
 
   const { data: levels = [] } = useLevels();
   const { data: designations = [] } = useDesignations();
-  const { data: maps = [] } = useDesignationLevelMaps();
+  const { data: maps = [], isLoading } = useDesignationLevelMaps();
   const { mutate: saveMap, isPending: isSaving } = useSaveDesignationLevelMap();
   const { mutate: deleteMap, isPending: isDeleting } = useDeleteDesignationLevelMap();
 
@@ -58,6 +58,11 @@ export const LevelDesignationMappingDialog = ({ open, onClose, asPanel = false }
   const levelName = (id: number) => levels.find(l => l.id === id)?.name ?? id;
   const designationName = (id: number) => designations.find(d => d.id === id)?.designationName ?? id;
 
+  const mappedDesignationIds = new Set(
+    maps.filter(m => m.id !== editingId).map(m => m.designationId)
+  );
+  const availableDesignations = designations.filter(d => !mappedDesignationIds.has(d.id));
+
   const formSection = (
     <Box sx={{ px: 3, pt: 2, pb: 2, flexShrink: 0 }}>
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
@@ -78,7 +83,7 @@ export const LevelDesignationMappingDialog = ({ open, onClose, asPanel = false }
             <InputLabel>Designation *</InputLabel>
             <Select label="Designation *" value={form.designationId}
               onChange={(e) => setForm(f => ({ ...f, designationId: String(e.target.value) }))}>
-              {designations.map(d => <MenuItem key={d.id} value={d.id}>{d.designationName}</MenuItem>)}
+              {availableDesignations.map(d => <MenuItem key={d.id} value={d.id}>{d.designationName}</MenuItem>)}
             </Select>
           </FormControl>
         </Grid>
@@ -97,40 +102,42 @@ export const LevelDesignationMappingDialog = ({ open, onClose, asPanel = false }
   );
 
   const listSection = (
-    <Box sx={{ overflowY: 'auto', flex: 1, px: 3, pb: 2 }}>
-      {maps.length > 0 && (
+    <Box sx={{ px: 3, pb: 2 }}>
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : maps.length > 0 && (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Existing Mappings</Typography>
-          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-            <Box sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 300 }}>
-                <TableHead sx={{ bgcolor: 'grey.50' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Level</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Designation</TableCell>
-                    <TableCell sx={{ fontWeight: 600, width: 80 }} align="right">Actions</TableCell>
+          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Table size="small" stickyHeader sx={{ minWidth: 300 }}>
+              <TableHead sx={{ bgcolor: 'grey.50' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Level</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Designation</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 80 }} align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {maps.map(m => (
+                  <TableRow key={m.id} hover selected={editingId === m.id}>
+                    <TableCell>{m.levelName ?? levelName(m.levelId)}</TableCell>
+                    <TableCell>{m.designationName ?? designationName(m.designationId)}</TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                        <IconButton size="small" color="primary" onClick={() => handleStartEdit(m)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" color="error" onClick={() => setDeleteTargetId(m.id)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {maps.map(m => (
-                    <TableRow key={m.id} hover selected={editingId === m.id}>
-                      <TableCell>{m.levelName ?? levelName(m.levelId)}</TableCell>
-                      <TableCell>{m.designationName ?? designationName(m.designationId)}</TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                          <IconButton size="small" color="primary" onClick={() => handleStartEdit(m)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton size="small" color="error" onClick={() => setDeleteTargetId(m.id)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
+                ))}
+              </TableBody>
+            </Table>
           </Box>
         </Box>
       )}

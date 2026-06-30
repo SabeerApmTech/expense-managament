@@ -147,7 +147,7 @@ export interface DesignationExpenseMap {
 export interface DesignationTravelMap {
   id: number;
   designationId: number;
-  travelModeId: number;
+  travelModeId: string; // API returns string, possibly comma-separated e.g. "2,4"
 }
 
 export interface Level {
