@@ -13,7 +13,7 @@ import { ExpenseFilters } from '../components/ExpenseFilters';
 import { ExpenseDrawer } from '../components/ExpenseDrawer';
 import type { DrawerMode } from '../components/ExpenseDrawer';
 import { useExpenseList, useDeleteExpense } from '../hooks/useExpenses';
-import { isSubmitted } from '../../../constants/masterData';
+import { isSubmitted, resolveStatusLabel } from '../../../constants/masterData';
 import { getStoredAuth } from '../../../store/authStore';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import type { Expense, ExpenseFilters as IFilters } from '../../../types/expense.types';
@@ -46,8 +46,8 @@ export const ExpenseListPage = () => {
   const columns: Column<Expense>[] = [
     { id: 'expenseNo', label: 'Expense No', minWidth: 130, sortable: true },
     { id: 'amount', label: 'Total Amount', minWidth: 120, sortable: true, render: (v) => formatCurrency(Number(v || 0)) },
-    { id: 'submittedOn', label: 'Submitted On', minWidth: 130, render: (v) => formatDate(String(v || '')) },
-    { id: 'status', label: 'Status', minWidth: 140, render: (v) => <StatusChip status={v as number} /> },
+    { id: 'submittedOn', label: 'Submitted On', minWidth: 130, render: (v) => formatDate(String(v || '')), exportValue: (v) => formatDate(String(v || '')) },
+    { id: 'status', label: 'Status', minWidth: 140, render: (v) => <StatusChip status={v as number} />, exportValue: (v) => resolveStatusLabel(String(v || '')) },
   ];
 
   const rowActions = (row: Expense & Record<string, unknown>): ActionItem[] => {

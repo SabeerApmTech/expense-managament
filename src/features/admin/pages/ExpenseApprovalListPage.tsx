@@ -8,6 +8,7 @@ import { AdminExpenseFilters } from '../components/AdminExpenseFilters';
 import { AdminExpenseDrawer } from '../components/AdminExpenseDrawer';
 import { useAdminExpenseList } from '../hooks/useAdminExpenses';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
+import { resolveStatusLabel } from '../../../constants/masterData';
 import type { Expense, AdminExpenseFilters as IFilters } from '../../../types/expense.types';
 import { AdminActionsCard } from '../components/AdminActionsCard';
 import { AdminDashboard } from '../components/AdminDashboard';
@@ -28,8 +29,8 @@ export const ExpenseApprovalListPage = () => {
   const columns: Column<Expense>[] = [
     { id: 'employeeName', label: 'Employee', minWidth: 130, sortable: true },
     { id: 'amount', label: 'Amount', minWidth: 110, sortable: true, render: (v) => formatCurrency(Number(v || 0)) },
-    { id: 'status', label: 'Status', minWidth: 130, render: (v) => <StatusChip status={v as number} /> },
-    { id: 'submittedOn', label: 'Submitted On', minWidth: 130, render: (v) => formatDate(String(v || '')) },
+    { id: 'status', label: 'Status', minWidth: 130, render: (v) => <StatusChip status={v as number} />, exportValue: (v) => resolveStatusLabel(String(v || '')) },
+    { id: 'submittedOn', label: 'Submitted On', minWidth: 130, render: (v) => formatDate(String(v || '')), exportValue: (v) => formatDate(String(v || '')) },
   ];
 
   const rowActions = (row: Expense & Record<string, unknown>): ActionItem[] => [

@@ -15,6 +15,7 @@ export interface Column<T> {
   align?: 'left' | 'right' | 'center';
   sortable?: boolean;
   render?: (value: unknown, row: T) => React.ReactNode;
+  exportValue?: (value: unknown, row: T) => string;
 }
 
 export interface SelectOption {

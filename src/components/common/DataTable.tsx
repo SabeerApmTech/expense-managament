@@ -53,7 +53,11 @@ function exportCSV<T extends Record<string, unknown>>(
   const header = cols.map((c) => '"' + c.label + '"').join(',');
   const body = rows.map((row) =>
     cols
-      .map((c) => '"' + String(row[c.id as keyof T] ?? '').replace(/"/g, '""') + '"')
+      .map((c) => {
+        const val = row[c.id as keyof T];
+        const text = c.exportValue ? c.exportValue(val, row) : String(val ?? '');
+        return '"' + text.replace(/"/g, '""') + '"';
+      })
       .join(',')
   );
   const csv = [header, ...body].join('\n');
@@ -102,7 +106,10 @@ function exportPDF<T extends Record<string, unknown>>(
   const cols = columns.filter((c) => String(c.id) !== 'actions');
   autoTable(doc, {
     head: [cols.map((c) => c.label)],
-    body: rows.map((row) => cols.map((c) => pdfSafe(String(row[c.id as keyof T] ?? '-')))),
+    body: rows.map((row) => cols.map((c) => {
+      const val = row[c.id as keyof T];
+      return pdfSafe(c.exportValue ? c.exportValue(val, row) : String(val ?? '-'));
+    })),
     startY,
     theme: 'grid',
     styles: { fontSize: 7, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.1 },

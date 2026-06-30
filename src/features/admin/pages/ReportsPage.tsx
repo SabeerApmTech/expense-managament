@@ -7,6 +7,7 @@ import { useAdminExpenseList } from '../hooks/useAdminExpenses';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import type { Expense, AdminExpenseFilters as IFilters } from '../../../types/expense.types';
 import { AdminActionsCard } from '../components/AdminActionsCard';
+import { resolveStatusLabel } from '../../../constants/masterData';
 import type { Column } from '../../../types/common.types';
 
 export const ReportsPage = () => {
@@ -17,8 +18,8 @@ export const ReportsPage = () => {
     { id: 'expenseNo', label: 'Expense No', minWidth: 120, sortable: true },
     { id: 'employeeName', label: 'Employee', minWidth: 130, sortable: true },
     { id: 'expenseType', label: 'Type', minWidth: 110, sortable: true },
-    { id: 'fromDate', label: 'From Date', minWidth: 100, render: (v) => formatDate(String(v || '')) },
-    { id: 'toDate', label: 'To Date', minWidth: 100, render: (v) => formatDate(String(v || '')) },
+    { id: 'fromDate', label: 'From Date', minWidth: 100, render: (v) => formatDate(String(v || '')), exportValue: (v) => formatDate(String(v || '')) },
+    { id: 'toDate', label: 'To Date', minWidth: 100, render: (v) => formatDate(String(v || '')), exportValue: (v) => formatDate(String(v || '')) },
     {
       id: 'amount',
       label: 'Amount',
@@ -28,8 +29,8 @@ export const ReportsPage = () => {
       render: (v) => formatCurrency(Number(v || 0)),
     },
     { id: 'initiatedBy', label: 'Initiated By', minWidth: 120 },
-    { id: 'status', label: 'Status', minWidth: 130, render: (v) => <StatusChip status={String(v || '')} /> },
-    { id: 'submittedOn', label: 'Submitted', minWidth: 110, render: (v) => formatDate(String(v || '')) },
+    { id: 'status', label: 'Status', minWidth: 130, render: (v) => <StatusChip status={String(v || '')} />, exportValue: (v) => resolveStatusLabel(String(v || '')) },
+    { id: 'submittedOn', label: 'Submitted', minWidth: 110, render: (v) => formatDate(String(v || '')), exportValue: (v) => formatDate(String(v || '')) },
   ];
 
   return (

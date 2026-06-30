@@ -77,14 +77,20 @@ export const AdminExpenseDetailsPage = () => {
           <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Expense Type" value={data.expenseType} /></Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Amount" value={formatCurrency(data.amount)} /></Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Pay Mode" value={data.payMode} /></Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Travel Mode" value={data.travelMode} /></Grid>
+          {(data.expenseType ?? '').toLowerCase() === 'travel' && (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Travel Mode" value={data.travelMode} /></Grid>
+          )}
           <Grid size={{ xs: 12 }}><Divider /></Grid>
           <Grid size={{ xs: 12 }}><Field label="Description" value={data.description} /></Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="From Date" value={formatDate(data.fromDate)} /></Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="To Date" value={formatDate(data.toDate)} /></Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Submitted On" value={formatDateTime(data.submittedOn ?? data.createdDate ?? '')} /></Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="From Location" value={data.areaFrom} /></Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="To Location" value={data.areaTo} /></Grid>
+          {(data.expenseType ?? '').toLowerCase() === 'travel' && (
+            <>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="From Location" value={data.areaFrom} /></Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="To Location" value={data.areaTo} /></Grid>
+            </>
+          )}
           <Grid size={{ xs: 12, sm: 6, md: 4 }}><Field label="Initiated By" value={data.initiatedBy ?? data.createdBy} /></Grid>
           {data.rejectReason && (
             <Grid size={{ xs: 12 }}><Field label="Rejection Reason" value={data.rejectReason} /></Grid>

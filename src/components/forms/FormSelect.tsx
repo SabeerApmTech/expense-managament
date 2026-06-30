@@ -24,8 +24,10 @@ export const FormSelect = ({ name, label, options, required, disabled }: Props) 
           </Typography>
           <FormControl fullWidth size="small" error={!!fieldState.error} disabled={disabled}>
             <Select {...field} value={field.value ?? ''} displayEmpty>
-              <MenuItem value="" disabled>
-                <Box component="span" sx={{ color: 'text.disabled' }}>Select {label}</Box>
+              <MenuItem value="">
+                <Box component="span" sx={{ color: required ? 'text.disabled' : 'text.secondary', fontStyle: required ? 'normal' : 'italic' }}>
+                  {required ? `Select ${label}` : '— None —'}
+                </Box>
               </MenuItem>
               {options.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>

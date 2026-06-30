@@ -77,15 +77,19 @@ export const ExpenseDetailsPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Field label="Pay Mode" value={payModeMap[detail.payModeId] ?? String(detail.payModeId)} />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <Field label="Travel Mode" value={travelModeMap[detail.travelModeId] ?? String(detail.travelModeId)} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <Field label="From Location" value={detail.areaFrom} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <Field label="To Location" value={detail.areaTo} />
-            </Grid>
+            {(expTypeMap[detail.expenseTypeId] ?? '').toLowerCase() === 'travel' && (
+              <>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Field label="Travel Mode" value={travelModeMap[detail.travelModeId] ?? String(detail.travelModeId)} />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Field label="From Location" value={detail.areaFrom} />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Field label="To Location" value={detail.areaTo} />
+                </Grid>
+              </>
+            )}
             {detail.description && (
               <Grid size={{ xs: 12 }}>
                 <Field label="Description" value={detail.description} />

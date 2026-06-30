@@ -106,9 +106,13 @@ function ViewContent({ expense }: { expense: Expense }) {
               <Grid size={{ xs: 6 }}><Field label="From Date" value={formatDate(detail.fromDate)} compact /></Grid>
               <Grid size={{ xs: 6 }}><Field label="To Date" value={formatDate(detail.toDate)} compact /></Grid>
               <Grid size={{ xs: 6 }}><Field label="Pay Mode" value={payModeMap[detail.payModeId] ?? String(detail.payModeId)} compact /></Grid>
-              <Grid size={{ xs: 6 }}><Field label="Travel Mode" value={travelModeMap[detail.travelModeId] ?? String(detail.travelModeId)} compact /></Grid>
-              <Grid size={{ xs: 6 }}><Field label="From Location" value={detail.areaFrom} compact /></Grid>
-              <Grid size={{ xs: 6 }}><Field label="To Location" value={detail.areaTo} compact /></Grid>
+              {(expTypeMap[detail.expenseTypeId] ?? '').toLowerCase() === 'travel' && (
+                <>
+                  <Grid size={{ xs: 6 }}><Field label="Travel Mode" value={travelModeMap[detail.travelModeId] ?? String(detail.travelModeId)} compact /></Grid>
+                  <Grid size={{ xs: 6 }}><Field label="From Location" value={detail.areaFrom} compact /></Grid>
+                  <Grid size={{ xs: 6 }}><Field label="To Location" value={detail.areaTo} compact /></Grid>
+                </>
+              )}
               {detail.initiatedBy && (
                 <Grid size={{ xs: 6 }}><Field label="Initiated By" value={employeeMap[detail.initiatedBy] ?? detail.initiatedBy} compact /></Grid>
               )}

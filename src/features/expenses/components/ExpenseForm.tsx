@@ -289,7 +289,7 @@ const ExpenseItemCard = ({
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormSelect
             name={`items.${index}.travelModeId`}
-            label={isTravel ? 'Travel Mode *' : 'Travel Mode'}
+            label="Travel Mode"
             options={travelModeOptions}
             disabled={loadingTravel}
             required={isTravel}
@@ -298,14 +298,14 @@ const ExpenseItemCard = ({
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             name={`items.${index}.areaFrom`}
-            label={isTravel ? 'From Location *' : 'From Location'}
+            label="From Location"
             required={isTravel}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             name={`items.${index}.areaTo`}
-            label={isTravel ? 'To Location *' : 'To Location'}
+            label="To Location"
             required={isTravel}
           />
         </Grid>
