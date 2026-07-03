@@ -27,10 +27,12 @@ export const useSaveExpense = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: SaveExpenseRequest) => expensesApi.save(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() }),
+        queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]);
       enqueueSnackbar('Expense submitted successfully', { variant: 'success' });
     },
     onError: (error) => {
