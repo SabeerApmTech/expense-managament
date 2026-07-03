@@ -68,6 +68,7 @@ export const EditExpensePage = () => {
             items: defaultItems.length > 0 ? defaultItems : undefined,
           }}
           existingBillUrls={(expense.details ?? []).map(d => d.billUrl?.split(',')[0] ?? null)}
+          excludeExpenseId={expense.id}
           onSubmit={handleSubmit}
           isSubmitting={isPending}
           onCancel={() => navigate('/expenses')}

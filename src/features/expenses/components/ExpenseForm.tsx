@@ -4,7 +4,8 @@ import {
 } from '@mui/material';
 import { FormProvider, useForm, useFieldArray, Controller, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
+import dayjs from 'dayjs';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
@@ -13,14 +14,17 @@ import { FormSelect } from '../../../components/forms/FormSelect';
 import { FormDatePicker } from '../../../components/forms/FormDatePicker';
 import { FormTextField } from '../../../components/forms/FormTextField';
 import { useExpenseTypes, usePayModes, useTravelModes, useExpensePageLoad } from '../hooks/useMasterData';
+import { useExpenseList } from '../hooks/useExpenses';
 import { useDesignationExpenseMaps, useDesignationTravelMaps, useEmployees } from '../../admin/hooks/useAdminMaster';
 import { getStoredAuth } from '../../../store/authStore';
+import { isRejected } from '../../../constants/masterData';
 import { expenseSchema, type ExpenseFormValues } from '../schemas/expense.schema';
 import type { SelectOption } from '../../../types/common.types';
 
 interface Props {
   defaultValues?: Partial<ExpenseFormValues>;
   existingBillUrls?: (string | null | undefined)[];
+  excludeExpenseId?: string | number;
   onSubmit: (values: ExpenseFormValues) => void;
   isSubmitting?: boolean;
   onCancel?: () => void;
@@ -168,7 +172,13 @@ const AmountField = ({ index, expenseTypeOptions }: AmountFieldProps) => {
 
 // ─── Per-item category alert ──────────────────────────────────────────────────
 
-type ExpTypeOption = SelectOption & { fromRange?: number; toRange?: number };
+type ExpTypeOption = SelectOption & {
+  fromRange?: number;
+  toRange?: number;
+  spent?: number;
+  disabled?: boolean;
+  disabledReason?: string;
+};
 
 const CATEGORY_MESSAGES: Record<string, string> = {
   travel:
@@ -190,11 +200,27 @@ const CategoryAlert = ({ index, expenseTypeOptions }: CategoryAlertProps) => {
   const { watch } = useFormContext<ExpenseFormValues>();
   const expenseTypeId = watch(`items.${index}.expenseTypeId`);
   if (!expenseTypeId) return null;
-  const label = (expenseTypeOptions.find(o => o.value === expenseTypeId)?.label ?? '').toLowerCase();
+  const selectedType = expenseTypeOptions.find(o => o.value === expenseTypeId);
+  const label = (selectedType?.label ?? '').toLowerCase();
   const message = CATEGORY_MESSAGES[label] ?? DEFAULT_CATEGORY_MESSAGE;
+
+  if (selectedType?.disabled) {
+    return (
+      <Alert severity="warning" sx={{ mb: 0.5, py: 0.5, fontSize: 13 }}>
+        Monthly limit for "{selectedType.label}" has already been used up
+        (₹{(selectedType.spent ?? 0).toLocaleString('en-IN')} of ₹{(selectedType.toRange ?? 0).toLocaleString('en-IN')}
+        {' '}this month). This category cannot be selected until next month.
+      </Alert>
+    );
+  }
+
+  const remaining = selectedType?.toRange != null ? selectedType.toRange - (selectedType.spent ?? 0) : undefined;
   return (
     <Alert severity="info" sx={{ mb: 0.5, py: 0.5, fontSize: 13 }}>
       {message}
+      {remaining != null && (
+        <>{' '}Remaining monthly limit for this category: ₹{remaining.toLocaleString('en-IN')}.</>
+      )}
     </Alert>
   );
 };
@@ -323,7 +349,7 @@ const ExpenseItemCard = ({
 
 // ─── Main form ────────────────────────────────────────────────────────────────
 
-export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmitting, onCancel }: Props) => {
+export const ExpenseForm = ({ defaultValues, existingBillUrls, excludeExpenseId, onSubmit, isSubmitting, onCancel }: Props) => {
   const { data: pageLoad } = useExpensePageLoad();
   const { data: expenseTypes = [], isLoading: loadingTypes } = useExpenseTypes();
   const { data: payModes = [], isLoading: loadingPay } = usePayModes();
@@ -331,6 +357,24 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
   const { data: designationExpenseMaps = [], isLoading: loadingDesignationExpenseMaps } = useDesignationExpenseMaps();
   const { data: designationTravelMaps = [] } = useDesignationTravelMaps();
   const { data: allEmployees = [] } = useEmployees();
+
+  const monthStart = dayjs().startOf('month').format('YYYY-MM-DD');
+  const monthEnd = dayjs().endOf('month').format('YYYY-MM-DD');
+  const { data: monthlyExpenses } = useExpenseList({ fromDate: monthStart, toDate: monthEnd });
+
+  // Amount already submitted this month per expense type, excluding rejected claims
+  // and the expense currently being edited (its own prior amount shouldn't count against itself).
+  const spentByType = useMemo(() => {
+    const totals: Record<number, number> = {};
+    (monthlyExpenses?.data ?? []).forEach(exp => {
+      if (excludeExpenseId != null && String(exp.id) === String(excludeExpenseId)) return;
+      if (isRejected(exp.status)) return;
+      (exp.details ?? []).forEach(d => {
+        totals[d.expenseTypeId] = (totals[d.expenseTypeId] ?? 0) + d.amount;
+      });
+    });
+    return totals;
+  }, [monthlyExpenses, excludeExpenseId]);
 
   const currentUserId = getStoredAuth()?.id;
   const employees = allEmployees.filter(e => e.id !== currentUserId);
@@ -340,18 +384,32 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
   const userExpenseMaps = designationExpenseMaps.filter(m => m.designationId === userDesignationId);
   const mappedExpenseTypeIds = new Set(userExpenseMaps.map(m => m.expenseTypeId));
 
-  const expenseTypeOptions: (SelectOption & { fromRange?: number; toRange?: number })[] = pageLoad?.expenseTypes.length
+  const buildTypeOption = (id: number, label: string, toRange?: number, fromRange?: number): ExpTypeOption => {
+    const spent = spentByType[id] ?? 0;
+    const limitReached = toRange != null && spent >= toRange;
+    return {
+      value: String(id),
+      label,
+      fromRange,
+      toRange,
+      spent,
+      disabled: limitReached,
+      disabledReason: limitReached ? 'Monthly limit reached' : undefined,
+    };
+  };
+
+  const expenseTypeOptions: ExpTypeOption[] = pageLoad?.expenseTypes.length
     ? pageLoad.expenseTypes
       .filter(t => mappedExpenseTypeIds.has(t.expenseTypeId))
       .map(t => {
         const map = userExpenseMaps.find(m => m.expenseTypeId === t.expenseTypeId);
-        return { value: String(t.expenseTypeId), label: t.expenseTypeName, fromRange: map?.amountRangeFrom, toRange: map?.amountRangeTo };
+        return buildTypeOption(t.expenseTypeId, t.expenseTypeName, map?.amountRangeTo, map?.amountRangeFrom);
       })
     : expenseTypes
       .filter(t => mappedExpenseTypeIds.has(t.id))
       .map(t => {
         const map = userExpenseMaps.find(m => m.expenseTypeId === t.id);
-        return { value: String(t.id), label: t.name, fromRange: map?.amountRangeFrom, toRange: map?.amountRangeTo };
+        return buildTypeOption(t.id, t.name, map?.amountRangeTo, map?.amountRangeFrom);
       });
 
   const userTravelMaps = designationTravelMaps.filter(m => m.designationId === userDesignationId);
@@ -422,12 +480,16 @@ export const ExpenseForm = ({ defaultValues, existingBillUrls, onSubmit, isSubmi
 
       if (typeOption?.toRange == null) return;
 
-      const combinedTotal = totalsByType[item.expenseTypeId] ?? 0;
+      const submissionTotal = totalsByType[item.expenseTypeId] ?? 0;
+      const alreadySpentThisMonth = typeOption.spent ?? 0;
+      const combinedTotal = submissionTotal + alreadySpentThisMonth;
       if (combinedTotal > typeOption.toRange) {
         const isMultiple = values.items.filter(i => i.expenseTypeId === item.expenseTypeId).length > 1;
-        const msg = isMultiple
-          ? `Combined total for "${typeOption.label}" (₹${combinedTotal.toLocaleString('en-IN')}) exceeds the limit of ₹${typeOption.toRange.toLocaleString('en-IN')}`
-          : `Amount exceeds the limit of ₹${typeOption.toRange.toLocaleString('en-IN')} for "${typeOption.label}"`;
+        const msg = alreadySpentThisMonth > 0
+          ? `"${typeOption.label}" already has ₹${alreadySpentThisMonth.toLocaleString('en-IN')} used this month; this claim would exceed the monthly limit of ₹${typeOption.toRange.toLocaleString('en-IN')}`
+          : isMultiple
+            ? `Combined total for "${typeOption.label}" (₹${combinedTotal.toLocaleString('en-IN')}) exceeds the limit of ₹${typeOption.toRange.toLocaleString('en-IN')}`
+            : `Amount exceeds the limit of ₹${typeOption.toRange.toLocaleString('en-IN')} for "${typeOption.label}"`;
         methods.setError(`items.${index}.amount`, { type: 'manual', message: msg });
         hasError = true;
       }

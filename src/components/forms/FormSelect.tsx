@@ -5,7 +5,7 @@ import type { SelectOption } from '../../types/common.types';
 interface Props {
   name: string;
   label: string;
-  options: SelectOption[];
+  options: (SelectOption & { disabled?: boolean; disabledReason?: string })[];
   required?: boolean;
   disabled?: boolean;
 }
@@ -30,7 +30,9 @@ export const FormSelect = ({ name, label, options, required, disabled }: Props) 
                 </Box>
               </MenuItem>
               {options.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                <MenuItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                  {opt.label}{opt.disabledReason ? ` (${opt.disabledReason})` : ''}
+                </MenuItem>
               ))}
             </Select>
             {fieldState.error && <FormHelperText>{fieldState.error.message}</FormHelperText>}

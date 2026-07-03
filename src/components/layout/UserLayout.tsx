@@ -45,11 +45,15 @@ const TC_SECTIONS = [
     body: 'Expense claims must be submitted within the current billing month. Claims submitted after the monthly cut-off may not be processed for that cycle and are subject to management discretion for the following period.',
   },
   {
-    title: '9. Accuracy & Integrity',
+    title: '9. Management Approval for High-Value Expenses',
+    body: 'If any expense exceeds ₹5,000, prior approval from management must be obtained before proceeding with that expense. Expenses incurred without such prior approval will not be considered a valid company expense and will not be reimbursed.',
+  },
+  {
+    title: '10. Accuracy & Integrity',
     body: 'Employees are expected to submit truthful and accurate claims. Submission of false, inflated, or duplicate claims constitutes a serious violation of company policy and may result in disciplinary action, including termination, and recovery of any amounts improperly reimbursed.',
   },
   {
-    title: '10. Policy Updates',
+    title: '11. Policy Updates',
     body: 'The company reserves the right to update these terms at any time. Employees will be notified of material changes, and continued use of the expense management system constitutes acceptance of the revised terms.',
   },
 ];
