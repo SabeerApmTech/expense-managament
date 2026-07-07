@@ -12,12 +12,15 @@ import { LoadingState } from '../../../components/common/LoadingState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { StatusChip } from '../../../components/common/StatusChip';
 import { Field } from '../../../components/common/Field';
+import { useAuthContext } from '../../../store/authStore';
 import { formatDate, formatCurrency, formatDateTime } from '../../../utils/formatters';
 import { isSubmitted } from '../../../constants/masterData';
 
 export const AdminExpenseDetailsPage = () => {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { role } = useAuthContext();
+  const isAdminOrSuperAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
   const { data, isLoading, isError, refetch } = useAdminExpenseDetail(id);
   const approveMutation = useApproveExpense();
   const rejectMutation = useRejectExpense();
@@ -38,7 +41,7 @@ export const AdminExpenseDetailsPage = () => {
   if (isLoading) return <LoadingState />;
   if (isError || !data) return <ErrorState onRetry={refetch} />;
 
-  const isPending = isSubmitted(data.status);
+  const isPending = isAdminOrSuperAdmin && isSubmitted(data.status);
 
   return (
     <Box>

@@ -12,6 +12,7 @@ import { resolveStatusLabel } from '../../../constants/masterData';
 import type { Expense, AdminExpenseFilters as IFilters } from '../../../types/expense.types';
 import { AdminActionsCard } from '../components/AdminActionsCard';
 import { AdminDashboard } from '../components/AdminDashboard';
+import { useAuthContext } from '../../../store/authStore';
 import type { Column } from '../../../types/common.types';
 
 interface DrawerState { open: boolean; expenseId: string | number | null }
@@ -19,6 +20,8 @@ interface DrawerState { open: boolean; expenseId: string | number | null }
 const DRAWER_INIT: DrawerState = { open: false, expenseId: null };
 
 export const ExpenseApprovalListPage = () => {
+  const { role } = useAuthContext();
+  const isAdminOrSuperAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
   const [filters, setFilters] = useState<IFilters>({});
   const { data, isLoading, isError, refetch } = useAdminExpenseList(filters);
   const [drawer, setDrawer] = useState<DrawerState>(DRAWER_INIT);
@@ -43,8 +46,12 @@ export const ExpenseApprovalListPage = () => {
 
   return (
     <Box>
-      <AdminDashboard />
-      <AdminActionsCard />
+      {isAdminOrSuperAdmin && (
+        <>
+          <AdminDashboard />
+          <AdminActionsCard />
+        </>
+      )}
 
       <Paper sx={{ mb: 2, borderRadius: 3 }}>
         <AdminExpenseFilters onFilter={setFilters} />

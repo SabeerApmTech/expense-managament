@@ -5,7 +5,9 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import GavelIcon from '@mui/icons-material/Gavel';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../store/authStore';
 import { getInitials } from '../../utils/formatters';
 
@@ -111,6 +113,9 @@ export const Header = ({ onMenuToggle, showMenuToggle = false }: Props) => {
   const { user, role, logout } = useAuthContext();
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
   const [termsOpen, setTermsOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAccountsTeam = user?.department === 'Accounts';
 
   return (
     <AppBar
@@ -128,6 +133,17 @@ export const Header = ({ onMenuToggle, showMenuToggle = false }: Props) => {
           Expense Management
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {isAccountsTeam && (
+            <Button
+              size="small"
+              startIcon={<AssessmentIcon />}
+              variant={location.pathname === '/reports' ? 'contained' : 'text'}
+              onClick={() => navigate('/reports')}
+              sx={{ mr: 1 }}
+            >
+              Reports
+            </Button>
+          )}
           <Typography variant="body2" color="text.secondary">
             {role === 'USER' ? user?.name : roleLabel[role || ''] || ''}
           </Typography>

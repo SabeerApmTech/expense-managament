@@ -53,7 +53,7 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
   const { expTypeMap, payModeMap, travelModeMap } = useExpenseLookupMaps();
   const { data: limits = [] } = useApprovalLimits();
   const { data: employees = [] } = useEmployees();
-  const { role } = useAuthContext();
+  const { role, user } = useAuthContext();
 
   const employeeMap = useMemo<Record<string, string>>(
     () => Object.fromEntries(employees.map(e => [e.id, e.name])),
@@ -68,6 +68,8 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
   const adminLimit = approvalLimit?.adminLimit ?? Infinity;
   const statusNum = Number(expense.status);
   const exceedsAdminLimit = expense.amount > adminLimit;
+  const isAdminOrSuperAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const isAccountsTeam = user?.department === 'Accounts';
 
   // Items with an initiator assigned that haven't been initiator-approved yet
   const pendingInitiatorItems = (expense.details ?? []).filter(
@@ -76,19 +78,17 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
   const hasPendingInitiatorApproval = pendingInitiatorItems.length > 0;
   const cannotApprove = hasPendingInitiatorApproval;
 
-  // Case 1: amount ≤ adminLimit → admin approves (status 3) → admin can settle
-  // Case 2: amount > adminLimit → admin approves (status 3) → super admin approves (status 4) → admin can settle
   // Admin sees Approve/Reject for status 1 and 2
-  // Super Admin sees Approve/Reject for status 3 when amount > adminLimit (and also 1, 2)
-  const isPending =
+  // Super Admin only ever approves expenses that exceed the admin limit — never for amounts within it
+  const isPending = isAdminOrSuperAdmin && (
     role === 'SUPER_ADMIN'
-      ? (statusNum === 1 || statusNum === 2 || (statusNum === 3 && exceedsAdminLimit))
-      : (statusNum === 1 || statusNum === 2);
+      ? (exceedsAdminLimit && (statusNum === 1 || statusNum === 2 || statusNum === 3))
+      : (statusNum === 1 || statusNum === 2)
+  );
 
-  // Settle is available to admin when:
-  // Case 1: status 3 (Admin Approved) AND amount ≤ adminLimit
-  // Case 2: status 4 (Super Admin Approved)
-  const isSettleable = statusNum === 4 || (statusNum === 3 && !exceedsAdminLimit);
+  // Settle is available to the Accounts team once fully approved:
+  // status 4 (Super Admin Approved), or status 3 (Admin Approved) when it never needed super-admin sign-off.
+  const isSettleable = isAccountsTeam && (statusNum === 4 || (statusNum === 3 && !exceedsAdminLimit));
 
   const resetAction = () => {
     setActionMode(null);

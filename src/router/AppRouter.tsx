@@ -11,16 +11,18 @@ import { ExpenseApprovalListPage } from '../features/admin/pages/ExpenseApproval
 import { AdminExpenseDetailsPage } from '../features/admin/pages/AdminExpenseDetailsPage';
 import { AdminReportPage } from '../features/admin/pages/AdminReportPage';
 import { useAuthContext } from '../store/authStore';
+import { getHomeRoute } from '../utils/routing';
 
 export const AppRouter = () => {
-  const { isAuthenticated, role } = useAuthContext();
+  const { isAuthenticated, role, user } = useAuthContext();
+  const homeRoute = getHomeRoute(role, user?.department);
 
   return (
     <BrowserRouter>
       <Routes>
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to={role === 'USER' ? '/expenses' : '/admin/approvals'} replace /> : <LoginPage />}
+          element={isAuthenticated ? <Navigate to={homeRoute} replace /> : <LoginPage />}
         />
 
         <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
@@ -32,7 +34,7 @@ export const AppRouter = () => {
           </Route>
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} allowedDepartments={['Accounts']} />}>
           <Route element={<MainLayout />}>
             <Route path="/admin/approvals" element={<ExpenseApprovalListPage />} />
             <Route path="/admin/approvals/:id" element={<AdminExpenseDetailsPage />} />
@@ -42,11 +44,7 @@ export const AppRouter = () => {
 
         <Route
           path="/"
-          element={
-            isAuthenticated
-              ? <Navigate to={role === 'USER' ? '/expenses' : '/admin/approvals'} replace />
-              : <Navigate to="/login" replace />
-          }
+          element={isAuthenticated ? <Navigate to={homeRoute} replace /> : <Navigate to="/login" replace />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
