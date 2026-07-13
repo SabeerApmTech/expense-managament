@@ -10,6 +10,8 @@ import {
   clearStoredAuth,
 } from "./store/authStore";
 import { authApi } from "./api/auth.api";
+import { usePushNotifications } from "./hooks/usePushNotifications";
+import { IosInstallBanner } from "./components/common/IosInstallBanner";
 import type { AuthUser } from "./types/auth.types";
 
 const queryClient = new QueryClient({
@@ -94,6 +96,8 @@ export default function App() {
     [user],
   );
 
+  usePushNotifications(authValue.isAuthenticated);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
@@ -104,6 +108,7 @@ export default function App() {
           autoHideDuration={3000}
         >
           <AuthContext.Provider value={authValue}>
+            {authValue.isAuthenticated && <IosInstallBanner />}
             <AppRouter />
           </AuthContext.Provider>
         </SnackbarProvider>
