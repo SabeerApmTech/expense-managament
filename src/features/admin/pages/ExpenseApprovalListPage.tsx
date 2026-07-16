@@ -66,6 +66,7 @@ export const ExpenseApprovalListPage = () => {
         rowKey="id"
         title="Expense Approvals"
         searchPlaceholder="Search expenses..."
+        showSerialNo
         rowActions={rowActions}
       />
 

@@ -12,11 +12,11 @@ export const ADMIN_EXPENSE_KEYS = {
 
 export const useAdminExpenseList = (filters: AdminExpenseFilters = {}) => {
   const params: Record<string, string> = {};
-  if (filters.employee) params.employee = filters.employee;
-  if (filters.expenseType) params.expenseType = filters.expenseType;
-  if (filters.fromDate) params.fromDate = filters.fromDate;
-  if (filters.toDate) params.toDate = filters.toDate;
-  if (filters.status) params.status = filters.status;
+  if (filters.employee) params.EmployeeId = filters.employee;
+  if (filters.expenseType) params.ExpenseTypeId = filters.expenseType;
+  if (filters.fromDate) params.FromDate = filters.fromDate;
+  if (filters.toDate) params.ToDate = filters.toDate;
+  if (filters.status) params.Status = filters.status;
 
   return useQuery({
     queryKey: ADMIN_EXPENSE_KEYS.list(filters),

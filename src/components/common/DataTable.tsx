@@ -42,23 +42,26 @@ interface Props<T> {
   addLabel?: string;
   rowActions?: (row: T) => ActionItem[];
   pdfSummary?: { label: string; value: string }[];
+  showSerialNo?: boolean;
 }
 
 function exportCSV<T extends Record<string, unknown>>(
   columns: Column<T>[],
   rows: T[],
-  filename: string
+  filename: string,
+  showSerialNo?: boolean
 ) {
   const cols = columns.filter((c) => String(c.id) !== 'actions');
-  const header = cols.map((c) => '"' + c.label + '"').join(',');
-  const body = rows.map((row) =>
-    cols
-      .map((c) => {
+  const header = [...(showSerialNo ? ['"S.No"'] : []), ...cols.map((c) => '"' + c.label + '"')].join(',');
+  const body = rows.map((row, idx) =>
+    [
+      ...(showSerialNo ? [String(idx + 1)] : []),
+      ...cols.map((c) => {
         const val = row[c.id as keyof T];
         const text = c.exportValue ? c.exportValue(val, row) : String(val ?? '');
         return '"' + text.replace(/"/g, '""') + '"';
-      })
-      .join(',')
+      }),
+    ].join(',')
   );
   const csv = [header, ...body].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -77,7 +80,8 @@ function exportPDF<T extends Record<string, unknown>>(
   columns: Column<T>[],
   rows: T[],
   filename: string,
-  summary?: { label: string; value: string }[]
+  summary?: { label: string; value: string }[],
+  showSerialNo?: boolean
 ) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -105,11 +109,14 @@ function exportPDF<T extends Record<string, unknown>>(
 
   const cols = columns.filter((c) => String(c.id) !== 'actions');
   autoTable(doc, {
-    head: [cols.map((c) => c.label)],
-    body: rows.map((row) => cols.map((c) => {
-      const val = row[c.id as keyof T];
-      return pdfSafe(c.exportValue ? c.exportValue(val, row) : String(val ?? '-'));
-    })),
+    head: [[...(showSerialNo ? ['S.No'] : []), ...cols.map((c) => c.label)]],
+    body: rows.map((row, idx) => [
+      ...(showSerialNo ? [String(idx + 1)] : []),
+      ...cols.map((c) => {
+        const val = row[c.id as keyof T];
+        return pdfSafe(c.exportValue ? c.exportValue(val, row) : String(val ?? '-'));
+      }),
+    ]),
     startY,
     theme: 'grid',
     styles: { fontSize: 7, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.1 },
@@ -183,6 +190,7 @@ export function DataTable<T extends Record<string, unknown>>({
   addLabel = 'Add',
   rowActions,
   pdfSummary,
+  showSerialNo = false,
 }: Props<T>) {
   const [pagination, setPagination] = useState<PaginationState>({ page: 0, pageSize: defaultPageSize });
   const [sort, setSort] = useState<SortState>({ field: '', direction: 'asc' });
@@ -289,7 +297,7 @@ export function DataTable<T extends Record<string, unknown>>({
         <IconButton
           size="small"
           title="Export PDF"
-          onClick={() => exportPDF(columns, sorted, title ?? 'export', pdfSummary)}
+          onClick={() => exportPDF(columns, sorted, title ?? 'export', pdfSummary, showSerialNo)}
           sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
         >
           <PictureAsPdfIcon fontSize="small" />
@@ -297,7 +305,7 @@ export function DataTable<T extends Record<string, unknown>>({
         <IconButton
           size="small"
           title="Export CSV"
-          onClick={() => exportCSV(columns, sorted, title ?? 'export')}
+          onClick={() => exportCSV(columns, sorted, title ?? 'export', showSerialNo)}
           sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
         >
           <GridOnIcon fontSize="small" />
@@ -312,7 +320,7 @@ export function DataTable<T extends Record<string, unknown>>({
           <EmptyState />
         ) : (
           <Grid container spacing={2}>
-            {paginated.map((row) => {
+            {paginated.map((row, idx) => {
               const actions = rowActions ? rowActions(row) : [];
               return (
                 <Grid key={String(row[rowKey])} size={{ xs: 12, sm: 6 }}>
@@ -331,6 +339,11 @@ export function DataTable<T extends Record<string, unknown>>({
                       </Box>
                     )}
                     <CardContent sx={{ pt: 2, pb: '12px !important', pr: actions.length ? 5.5 : 2 }}>
+                      {showSerialNo && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 700 }}>
+                          #{pagination.page * pagination.pageSize + idx + 1}
+                        </Typography>
+                      )}
                       <Grid container spacing={1.5}>
                         {dataColumns.map((col) => (
                           <Grid key={String(col.id)} size={{ xs: 6 }}>
@@ -376,6 +389,25 @@ export function DataTable<T extends Record<string, unknown>>({
         >
           <TableHead>
             <TableRow>
+              {showSerialNo && (
+                <TableCell
+                  align="center"
+                  sx={{
+                    minWidth: 56,
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    py: 1,
+                    px: 1.5,
+                    bgcolor: '#1a3bcc',
+                    borderBottom: '2px solid #1531b0',
+                    borderRightColor: 'rgba(255,255,255,0.2)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  S.No
+                </TableCell>
+              )}
               {dataColumns.map((col) => (
                 <TableCell
                   key={String(col.id)}
@@ -433,7 +465,7 @@ export function DataTable<T extends Record<string, unknown>>({
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={dataColumns.length + (rowActions ? 1 : 0)} sx={{ border: 0 }}>
+                <TableCell colSpan={dataColumns.length + (rowActions ? 1 : 0) + (showSerialNo ? 1 : 0)} sx={{ border: 0 }}>
                   <EmptyState />
                 </TableCell>
               </TableRow>
@@ -449,6 +481,11 @@ export function DataTable<T extends Record<string, unknown>>({
                       '& td': { py: 0.75, px: 1.5, fontSize: 13, borderColor: 'rgba(200,210,255,0.5)' },
                     }}
                   >
+                    {showSerialNo && (
+                      <TableCell align="center">
+                        {pagination.page * pagination.pageSize + idx + 1}
+                      </TableCell>
+                    )}
                     {dataColumns.map((col) => (
                       <TableCell key={String(col.id)} align={col.align || 'left'}>
                         {col.render
@@ -522,7 +559,7 @@ export function DataTable<T extends Record<string, unknown>>({
               onChange={(e) => setPagination({ page: 0, pageSize: Number(e.target.value) })}
               sx={{ fontSize: 13, borderRadius: 2 }}
             >
-              {[5, 10, 25, 50].map((n) => (
+              {[5, 10, 25, 50, 100].map((n) => (
                 <MenuItem key={n} value={n}>
                   {n} / page
                 </MenuItem>

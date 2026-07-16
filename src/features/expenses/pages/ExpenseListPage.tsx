@@ -93,6 +93,7 @@ export const ExpenseListPage = () => {
         rowKey="id"
         title="Expense List"
         searchPlaceholder="Search expenses..."
+        showSerialNo
         onAdd={() => openDrawer('add')}
         addLabel="Add Expense"
         rowActions={rowActions}

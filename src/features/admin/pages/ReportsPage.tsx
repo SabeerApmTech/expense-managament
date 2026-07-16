@@ -50,6 +50,7 @@ export const ReportsPage = () => {
         rowKey="id"
         title="Expense Reports"
         searchPlaceholder="Search expenses..."
+        showSerialNo
       />
     </Box>
   );
