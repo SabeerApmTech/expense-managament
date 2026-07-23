@@ -6,6 +6,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import PaymentsIcon from '@mui/icons-material/Payments';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../../store/authStore';
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Expense List', path: ROUTES.ADMIN.APPROVALS, icon: <AdminPanelSettingsIcon />, roles: ['ADMIN'] },
   { label: 'Expense Approvals', path: ROUTES.ADMIN.APPROVALS, icon: <AdminPanelSettingsIcon />, roles: ['SUPER_ADMIN'] },
   { label: 'Reports', path: ROUTES.ADMIN.REPORTS, icon: <AssessmentIcon />, roles: ['ADMIN', 'SUPER_ADMIN'] },
+  { label: 'Settlement History', path: ROUTES.ADMIN.SETTLEMENT_HISTORY, icon: <PaymentsIcon />, roles: ['ADMIN', 'SUPER_ADMIN'] },
 ];
 
 export const Sidebar = ({ open, onClose, drawerWidth }: Props) => {

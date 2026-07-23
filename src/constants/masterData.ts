@@ -87,8 +87,10 @@ export const ROUTES = {
     APPROVALS: '/admin/approvals',
     APPROVAL_DETAILS: '/admin/approvals/:id',
     REPORTS: '/reports',
+    SETTLEMENT_HISTORY: '/settlement-history',
   },
   SUPER_ADMIN: {
     REPORTS: '/reports',
+    SETTLEMENT_HISTORY: '/settlement-history',
   },
 } as const;

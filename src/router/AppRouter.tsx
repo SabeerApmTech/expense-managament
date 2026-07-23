@@ -10,6 +10,7 @@ import { ExpenseDetailsPage } from '../features/expenses/pages/ExpenseDetailsPag
 import { ExpenseApprovalListPage } from '../features/admin/pages/ExpenseApprovalListPage';
 import { AdminExpenseDetailsPage } from '../features/admin/pages/AdminExpenseDetailsPage';
 import { AdminReportPage } from '../features/admin/pages/AdminReportPage';
+import { SettlementHistoryPage } from '../features/admin/pages/SettlementHistoryPage';
 import { useAuthContext } from '../store/authStore';
 import { getHomeRoute } from '../utils/routing';
 
@@ -39,6 +40,7 @@ export const AppRouter = () => {
             <Route path="/admin/approvals" element={<ExpenseApprovalListPage />} />
             <Route path="/admin/approvals/:id" element={<AdminExpenseDetailsPage />} />
             <Route path="/reports" element={<AdminReportPage />} />
+            <Route path="/settlement-history" element={<SettlementHistoryPage />} />
           </Route>
         </Route>
 

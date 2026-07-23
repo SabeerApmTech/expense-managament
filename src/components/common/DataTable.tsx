@@ -2,7 +2,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel,
   Paper, Box, TextField, InputAdornment, Typography, Divider,
   IconButton, Menu, MenuItem, Button, Select, FormControl,
-  Card, CardContent, Grid,
+  Card, CardContent, Grid, Checkbox,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -43,6 +43,10 @@ interface Props<T> {
   rowActions?: (row: T) => ActionItem[];
   pdfSummary?: { label: string; value: string }[];
   showSerialNo?: boolean;
+  selectable?: boolean;
+  selectedIds?: (string | number)[];
+  onSelectionChange?: (ids: (string | number)[]) => void;
+  isRowSelectable?: (row: T) => boolean;
 }
 
 function exportCSV<T extends Record<string, unknown>>(
@@ -191,6 +195,10 @@ export function DataTable<T extends Record<string, unknown>>({
   rowActions,
   pdfSummary,
   showSerialNo = false,
+  selectable = false,
+  selectedIds = [],
+  onSelectionChange,
+  isRowSelectable,
 }: Props<T>) {
   const [pagination, setPagination] = useState<PaginationState>({ page: 0, pageSize: defaultPageSize });
   const [sort, setSort] = useState<SortState>({ field: '', direction: 'asc' });
@@ -222,6 +230,29 @@ export function DataTable<T extends Record<string, unknown>>({
       return sort.direction === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
     });
   }, [filtered, sort]);
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const eligibleIds = useMemo(
+    () => sorted.filter((row) => !isRowSelectable || isRowSelectable(row)).map((row) => row[rowKey] as string | number),
+    [sorted, isRowSelectable, rowKey]
+  );
+  const allEligibleSelected = eligibleIds.length > 0 && eligibleIds.every((id) => selectedSet.has(id));
+  const someEligibleSelected = !allEligibleSelected && eligibleIds.some((id) => selectedSet.has(id));
+
+  const toggleRow = (id: string | number, checked: boolean) => {
+    if (!onSelectionChange) return;
+    onSelectionChange(checked ? [...selectedIds, id] : selectedIds.filter((sid) => sid !== id));
+  };
+
+  const toggleAll = (checked: boolean) => {
+    if (!onSelectionChange) return;
+    const eligibleSet = new Set(eligibleIds);
+    onSelectionChange(
+      checked
+        ? [...selectedIds.filter((id) => !eligibleSet.has(id)), ...eligibleIds]
+        : selectedIds.filter((id) => !eligibleSet.has(id))
+    );
+  };
 
   const totalItems = sorted.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pagination.pageSize));
@@ -322,6 +353,8 @@ export function DataTable<T extends Record<string, unknown>>({
           <Grid container spacing={2}>
             {paginated.map((row, idx) => {
               const actions = rowActions ? rowActions(row) : [];
+              const rowId = row[rowKey] as string | number;
+              const rowSelectable = !isRowSelectable || isRowSelectable(row);
               return (
                 <Grid key={String(row[rowKey])} size={{ xs: 12, sm: 6 }}>
                   <Card
@@ -333,12 +366,22 @@ export function DataTable<T extends Record<string, unknown>>({
                       '&:hover': { boxShadow: 3 },
                     }}
                   >
+                    {selectable && (
+                      <Box sx={{ position: 'absolute', top: 2, left: 2, zIndex: 1 }}>
+                        <Checkbox
+                          size="small"
+                          checked={selectedSet.has(rowId)}
+                          disabled={!rowSelectable}
+                          onChange={(e) => toggleRow(rowId, e.target.checked)}
+                        />
+                      </Box>
+                    )}
                     {actions.length > 0 && (
                       <Box sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1 }}>
                         <RowActionMenu actions={actions} />
                       </Box>
                     )}
-                    <CardContent sx={{ pt: 2, pb: '12px !important', pr: actions.length ? 5.5 : 2 }}>
+                    <CardContent sx={{ pt: selectable ? 4.5 : 2, pb: '12px !important', pr: actions.length ? 5.5 : 2 }}>
                       {showSerialNo && (
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 700 }}>
                           #{pagination.page * pagination.pageSize + idx + 1}
@@ -389,6 +432,21 @@ export function DataTable<T extends Record<string, unknown>>({
         >
           <TableHead>
             <TableRow>
+              {selectable && (
+                <TableCell
+                  padding="checkbox"
+                  sx={{ bgcolor: '#1a3bcc', borderBottom: '2px solid #1531b0', borderRightColor: 'rgba(255,255,255,0.2)' }}
+                >
+                  <Checkbox
+                    size="small"
+                    checked={allEligibleSelected}
+                    indeterminate={someEligibleSelected}
+                    onChange={(e) => toggleAll(e.target.checked)}
+                    disabled={eligibleIds.length === 0}
+                    sx={{ color: 'rgba(255,255,255,0.7)', '&.Mui-checked': { color: 'white' }, '&.MuiCheckbox-indeterminate': { color: 'white' } }}
+                  />
+                </TableCell>
+              )}
               {showSerialNo && (
                 <TableCell
                   align="center"
@@ -465,13 +523,15 @@ export function DataTable<T extends Record<string, unknown>>({
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={dataColumns.length + (rowActions ? 1 : 0) + (showSerialNo ? 1 : 0)} sx={{ border: 0 }}>
+                <TableCell colSpan={dataColumns.length + (rowActions ? 1 : 0) + (showSerialNo ? 1 : 0) + (selectable ? 1 : 0)} sx={{ border: 0 }}>
                   <EmptyState />
                 </TableCell>
               </TableRow>
             ) : (
               paginated.map((row, idx) => {
                 const actions = rowActions ? rowActions(row) : [];
+                const rowId = row[rowKey] as string | number;
+                const rowSelectable = !isRowSelectable || isRowSelectable(row);
                 return (
                   <TableRow
                     key={String(row[rowKey])}
@@ -481,6 +541,16 @@ export function DataTable<T extends Record<string, unknown>>({
                       '& td': { py: 0.75, px: 1.5, fontSize: 13, borderColor: 'rgba(200,210,255,0.5)' },
                     }}
                   >
+                    {selectable && (
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          size="small"
+                          checked={selectedSet.has(rowId)}
+                          disabled={!rowSelectable}
+                          onChange={(e) => toggleRow(rowId, e.target.checked)}
+                        />
+                      </TableCell>
+                    )}
                     {showSerialNo && (
                       <TableCell align="center">
                         {pagination.page * pagination.pageSize + idx + 1}

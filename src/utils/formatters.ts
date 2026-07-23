@@ -18,6 +18,15 @@ export const formatDateTime = (date: string | null | undefined): string => {
   return dayjs(date).format('DD MMM YYYY, hh:mm A');
 };
 
+export const formatCompactCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(amount);
+};
+
 export const getInitials = (name: string | null | undefined): string => {
   if (!name?.trim()) return '?';
   const parts = name.trim().split(/\s+/);

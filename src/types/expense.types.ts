@@ -74,6 +74,7 @@ export interface Expense {
   settledBy?: string | null;
   settledDate?: string | null;
   settlementRemarks?: string | null;
+  settledAmount?: number;
   approvedDate?: string | null;
   rejectedDate?: string | null;
 }
@@ -82,6 +83,7 @@ export interface ExpenseListResponse {
   total: number;
   page: number;
   size: number;
+  settledAmount?: number;
   data: Expense[];
 }
 
@@ -249,3 +251,29 @@ export interface DashboardData {
 // ─── Report ───────────────────────────────────────────────────────────────────
 
 export type ReportRow = Expense;
+
+// ─── Settlement History ────────────────────────────────────────────────────────
+
+export interface DailySettlementSummary {
+  date: string;
+  amount: number;
+}
+
+export interface MonthlySettlementSummary {
+  year: number;
+  month: number;
+  monthName: string;
+  amount: number;
+}
+
+export interface EmployeeSettlementSummary {
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+}
+
+export interface SettlementHistoryResponse {
+  dailySummary: DailySettlementSummary[];
+  monthlySummary: MonthlySettlementSummary[];
+  employeeSummary: EmployeeSettlementSummary[];
+}

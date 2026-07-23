@@ -64,22 +64,22 @@ export const useRejectExpense = () => {
   });
 };
 
-export const useSettleExpense = () => {
+export const useSettleExpensesBulk = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: {
-      expenseId: string | number;
+      expenseIds: (string | number)[];
       settlementBillFile: File;
       remarks: string;
-    }) => adminApi.settleExpense(data),
-    onSuccess: (_, { expenseId }) => {
+    }) => adminApi.settleExpensesBulk(data),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.detail(String(expenseId)) });
+      queryClient.invalidateQueries({ queryKey: ADMIN_EXPENSE_KEYS.all });
       queryClient.invalidateQueries({ queryKey: ['expenses', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      enqueueSnackbar('Expense marked as settled', { variant: 'success' });
+      enqueueSnackbar('Expenses marked as settled', { variant: 'success' });
     },
-    onError: () => enqueueSnackbar('Failed to settle expense', { variant: 'error' }),
+    onError: () => enqueueSnackbar('Failed to settle expenses', { variant: 'error' }),
   });
 };
 
@@ -88,4 +88,11 @@ export const useExpenseReport = () =>
     mutationFn: (payload: { fromDate: string; toDate: string; employeeId: string; expenseTypeId: number }) =>
       adminApi.getExpenseReport(payload),
     onError: () => enqueueSnackbar('Failed to generate report', { variant: 'error' }),
+  });
+
+export const useSettlementHistory = () =>
+  useMutation({
+    mutationFn: (payload: { fromDate: string; toDate: string; employeeId: string; expenseTypeId: number }) =>
+      adminApi.getExpenseAmountDetails(payload),
+    onError: () => enqueueSnackbar('Failed to fetch settlement history', { variant: 'error' }),
   });

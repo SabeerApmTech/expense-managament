@@ -5,8 +5,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import PaymentsIcon from '@mui/icons-material/Payments';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useMemo, useState } from 'react';
 import { StatusChip } from '../../../components/common/StatusChip';
@@ -14,7 +12,7 @@ import { Field, FieldLabel } from '../../../components/common/Field';
 import { BillAttachments } from '../../../components/common/BillAttachments';
 import { BillViewerDialog } from '../../../components/common/BillViewerDialog';
 import { useExpenseLookupMaps } from '../../expenses/hooks/useExpenseLookupMaps';
-import { useApproveExpense, useRejectExpense, useSettleExpense } from '../hooks/useAdminExpenses';
+import { useApproveExpense, useRejectExpense } from '../hooks/useAdminExpenses';
 import { useApprovalLimits, useEmployees } from '../hooks/useAdminMaster';
 import { useAuthContext } from '../../../store/authStore';
 import { formatDate, formatCurrency, formatDateTime } from '../../../utils/formatters';
@@ -26,7 +24,7 @@ interface Props {
   onClose: () => void;
 }
 
-type ActionMode = 'approve' | 'reject' | 'settle' | null;
+type ActionMode = 'approve' | 'reject' | null;
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <Box sx={{ mb: 2.5 }}>
@@ -46,14 +44,11 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
   const [actionMode, setActionMode] = useState<ActionMode>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectError, setRejectError] = useState('');
-  const [settlementFile, setSettlementFile] = useState<File | null>(null);
-  const [settlementFileError, setSettlementFileError] = useState('');
-  const [settlementRemarks, setSettlementRemarks] = useState('');
 
   const { expTypeMap, payModeMap, travelModeMap } = useExpenseLookupMaps();
   const { data: limits = [] } = useApprovalLimits();
   const { data: employees = [] } = useEmployees();
-  const { role, user } = useAuthContext();
+  const { role } = useAuthContext();
 
   const employeeMap = useMemo<Record<string, string>>(
     () => Object.fromEntries(employees.map(e => [e.id, e.name])),
@@ -62,14 +57,12 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
 
   const approveMutation = useApproveExpense();
   const rejectMutation = useRejectExpense();
-  const settleMutation = useSettleExpense();
 
   const approvalLimit = limits[0];
   const adminLimit = approvalLimit?.adminLimit ?? Infinity;
   const statusNum = Number(expense.status);
   const exceedsAdminLimit = expense.amount > adminLimit;
   const isAdminOrSuperAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-  const isAccountsTeam = user?.department === 'Accounts';
 
   // Items with an initiator assigned that haven't been initiator-approved yet
   const pendingInitiatorItems = (expense.details ?? []).filter(
@@ -86,17 +79,10 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
       : (statusNum === 1 || statusNum === 2)
   );
 
-  // Settle is available to the Accounts team once fully approved:
-  // status 4 (Super Admin Approved), or status 3 (Admin Approved) when it never needed super-admin sign-off.
-  const isSettleable = isAccountsTeam && (statusNum === 4 || (statusNum === 3 && !exceedsAdminLimit));
-
   const resetAction = () => {
     setActionMode(null);
     setRejectReason('');
     setRejectError('');
-    setSettlementFile(null);
-    setSettlementFileError('');
-    setSettlementRemarks('');
   };
 
   const handleApprove = () => {
@@ -111,14 +97,6 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
     if (!rejectReason.trim()) { setRejectError('Rejection reason is required'); return; }
     rejectMutation.mutate(
       { expenseId: Number(expense.id), reason: rejectReason },
-      { onSuccess: () => { resetAction(); onClose(); } },
-    );
-  };
-
-  const handleSettle = () => {
-    if (!settlementFile) { setSettlementFileError('Settlement bill is required'); return; }
-    settleMutation.mutate(
-      { expenseId: expense.id, settlementBillFile: settlementFile, remarks: settlementRemarks },
       { onSuccess: () => { resetAction(); onClose(); } },
     );
   };
@@ -203,7 +181,7 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
         </Paper>
       ))}
 
-      {(isPending || isSettleable) && (
+      {isPending && (
         <Box sx={{ mt: 1, pt: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
           {actionMode === 'approve' && (
             <Box>
@@ -248,38 +226,6 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
             </Box>
           )}
 
-          {actionMode === 'settle' && (
-            <Box>
-              <Box sx={{ mb: 1.5 }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.75 }}>
-                  Settlement Bill *
-                </Typography>
-                <Button component="label" variant="outlined" size="small"
-                  startIcon={<AttachFileIcon />} color={settlementFileError ? 'error' : 'primary'}>
-                  {settlementFile ? settlementFile.name : 'Choose File'}
-                  <input type="file" hidden accept="image/*,application/pdf"
-                    onChange={(e) => { setSettlementFile(e.target.files?.[0] ?? null); setSettlementFileError(''); }}
-                  />
-                </Button>
-                {settlementFileError && (
-                  <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>{settlementFileError}</Typography>
-                )}
-              </Box>
-              <TextField label="Remarks" size="small" fullWidth multiline rows={2}
-                value={settlementRemarks}
-                onChange={(e) => setSettlementRemarks(e.target.value)}
-                sx={{ mb: 1.5 }} />
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button variant="outlined" onClick={resetAction} fullWidth size="small">Cancel</Button>
-                <Button variant="contained" color="info" fullWidth size="small"
-                  onClick={handleSettle} disabled={settleMutation.isPending}
-                  startIcon={settleMutation.isPending ? undefined : <PaymentsIcon />}>
-                  {settleMutation.isPending ? 'Settling…' : 'Confirm Settle'}
-                </Button>
-              </Box>
-            </Box>
-          )}
-
           {!actionMode && (
             <Box>
               {isPending && hasPendingInitiatorApproval && (
@@ -288,24 +234,14 @@ function DrawerContent({ expense, onClose }: { expense: Expense; onClose: () => 
                 </Alert>
               )}
               <Box sx={{ display: 'flex', gap: 1.5 }}>
-                {isPending && (
-                  <>
-                    <Button variant="contained" color="success" fullWidth startIcon={<CheckCircleIcon />}
-                      onClick={() => setActionMode('approve')} disabled={cannotApprove}>
-                      Approve
-                    </Button>
-                    <Button variant="contained" color="error" fullWidth startIcon={<CancelIcon />}
-                      onClick={() => setActionMode('reject')}>
-                      Reject
-                    </Button>
-                  </>
-                )}
-                {isSettleable && (
-                  <Button variant="contained" color="info" fullWidth startIcon={<PaymentsIcon />}
-                    onClick={() => setActionMode('settle')}>
-                    Mark as Settled
-                  </Button>
-                )}
+                <Button variant="contained" color="success" fullWidth startIcon={<CheckCircleIcon />}
+                  onClick={() => setActionMode('approve')} disabled={cannotApprove}>
+                  Approve
+                </Button>
+                <Button variant="contained" color="error" fullWidth startIcon={<CancelIcon />}
+                  onClick={() => setActionMode('reject')}>
+                  Reject
+                </Button>
               </Box>
             </Box>
           )}

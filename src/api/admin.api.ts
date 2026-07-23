@@ -12,6 +12,7 @@ import type {
   Employee,
   DashboardData,
   ApprovalLimit,
+  SettlementHistoryResponse,
 } from '../types/expense.types';
 
 export const adminApi = {
@@ -33,13 +34,13 @@ export const adminApi = {
     await apiClient.post('/api/expense/approve-reject-expense', payload);
   },
 
-  settleExpense: async (data: {
-    expenseId: string | number;
+  settleExpensesBulk: async (data: {
+    expenseIds: (string | number)[];
     settlementBillFile: File;
     remarks: string;
   }): Promise<void> => {
     const formData = new FormData();
-    formData.append('ExpenseId', String(data.expenseId));
+    formData.append('ExpenseIds', data.expenseIds.join(','));
     formData.append('SettlementBillFile', data.settlementBillFile);
     formData.append('Remarks', data.remarks);
     formData.append('Status', '6');
@@ -223,6 +224,17 @@ export const adminApi = {
     expenseTypeId: number;
   }): Promise<Expense[]> => {
     const response = await apiClient.post<Expense[]>('/api/expense/expensereport', payload);
+    return response.data;
+  },
+
+  // ─── Settlement History ─────────────────────────────────────────────────────
+  getExpenseAmountDetails: async (payload: {
+    fromDate: string;
+    toDate: string;
+    employeeId: string;
+    expenseTypeId: number;
+  }): Promise<SettlementHistoryResponse> => {
+    const response = await apiClient.post<SettlementHistoryResponse>('/api/expense/expenseAmountDetails', payload);
     return response.data;
   },
 
