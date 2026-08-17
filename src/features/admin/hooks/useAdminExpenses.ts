@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
+import dayjs from 'dayjs';
 import { adminApi } from '../../../api/admin.api';
 import type { AdminExpenseFilters } from '../../../types/expense.types';
 
@@ -14,8 +15,11 @@ export const useAdminExpenseList = (filters: AdminExpenseFilters = {}) => {
   const params: Record<string, string> = {};
   if (filters.employee) params.EmployeeId = filters.employee;
   if (filters.expenseType) params.ExpenseTypeId = filters.expenseType;
-  if (filters.fromDate) params.FromDate = filters.fromDate;
-  if (filters.toDate) params.ToDate = filters.toDate;
+  // Send full ISO date-time (not just a date) so the backend's DateTime binder
+  // gets an unambiguous instant — ToDate is pushed to end-of-day so the last
+  // day of the range isn't truncated to its midnight instant.
+  if (filters.fromDate) params.FromDate = dayjs(filters.fromDate).startOf('day').toISOString();
+  if (filters.toDate) params.ToDate = dayjs(filters.toDate).endOf('day').toISOString();
   if (filters.status) params.Status = filters.status;
 
   return useQuery({

@@ -10,6 +10,7 @@ import { DataTable } from '../../../components/common/DataTable';
 import type { ActionItem } from '../../../components/common/DataTable';
 import { StatusChip } from '../../../components/common/StatusChip';
 import { ExpenseFilters } from '../components/ExpenseFilters';
+import { MonthlyExpenseSummary } from '../components/MonthlyExpenseSummary';
 import { ExpenseDrawer } from '../components/ExpenseDrawer';
 import type { DrawerMode } from '../components/ExpenseDrawer';
 import { useExpenseList, useDeleteExpense } from '../hooks/useExpenses';
@@ -79,6 +80,9 @@ export const ExpenseListPage = () => {
 
   return (
     <Box>
+      {/* Monthly summary */}
+      <MonthlyExpenseSummary />
+
       {/* Filter */}
       <Paper sx={{ mb: 2, borderRadius: 3 }}>
         <ExpenseFilters onFilter={setFilters} />

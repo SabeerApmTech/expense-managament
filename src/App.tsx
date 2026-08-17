@@ -12,7 +12,11 @@ import {
 import { authApi } from "./api/auth.api";
 import { usePushNotifications } from "./hooks/usePushNotifications";
 import { IosInstallBanner } from "./components/common/IosInstallBanner";
+import { UnderConstruction } from "./components/common/UnderConstruction";
 import type { AuthUser } from "./types/auth.types";
+
+// Toggle to false once the API overhaul is complete and the app is ready to go live again.
+const UNDER_CONSTRUCTION = true;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +101,15 @@ export default function App() {
   );
 
   usePushNotifications(authValue.isAuthenticated);
+
+  if (UNDER_CONSTRUCTION) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <UnderConstruction />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
