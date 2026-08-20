@@ -2,15 +2,9 @@ import {
   Drawer, List, ListItemButton, ListItemIcon, ListItemText,
   Toolbar, Typography, Box, Divider,
 } from '@mui/material';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import PaymentsIcon from '@mui/icons-material/Payments';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuthContext } from '../../store/authStore';
-import { ROUTES } from '../../constants/masterData';
+import { useVisibleNavItems } from './navItems';
 
 interface Props {
   open: boolean;
@@ -18,28 +12,10 @@ interface Props {
   drawerWidth: number;
 }
 
-interface NavItem {
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-  roles: string[];
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { label: 'My Expenses', path: ROUTES.USER.EXPENSES, icon: <ReceiptLongIcon />, roles: ['USER'] },
-  { label: 'Add Expense', path: ROUTES.USER.ADD_EXPENSE, icon: <AddCircleOutlinedIcon />, roles: ['USER'] },
-  { label: 'Expense List', path: ROUTES.ADMIN.APPROVALS, icon: <AdminPanelSettingsIcon />, roles: ['ADMIN'] },
-  { label: 'Expense Approvals', path: ROUTES.ADMIN.APPROVALS, icon: <AdminPanelSettingsIcon />, roles: ['SUPER_ADMIN'] },
-  { label: 'Reports', path: ROUTES.ADMIN.REPORTS, icon: <AssessmentIcon />, roles: ['ADMIN', 'SUPER_ADMIN'] },
-  { label: 'Settlement History', path: ROUTES.ADMIN.SETTLEMENT_HISTORY, icon: <PaymentsIcon />, roles: ['ADMIN', 'SUPER_ADMIN'] },
-];
-
 export const Sidebar = ({ open, onClose, drawerWidth }: Props) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { role } = useAuthContext();
-
-  const items = NAV_ITEMS.filter((item) => role && item.roles.includes(role));
+  const items = useVisibleNavItems();
 
   const content = (
     <Box sx={{ overflow: 'hidden' }}>

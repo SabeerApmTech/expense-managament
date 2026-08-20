@@ -3,14 +3,14 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { useAuthContext } from '../../store/authStore';
+import { useVisibleNavItems } from './navItems';
 
 const DRAWER_WIDTH = 240;
 
 export const MainLayout = () => {
-  const { role } = useAuthContext();
-  const hasSidebar = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navItems = useVisibleNavItems();
+  const hasSidebar = navItems.length > 1;
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>

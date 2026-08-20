@@ -25,7 +25,7 @@ export const UnderConstruction = () => (
       }}
     >
       <ConstructionIcon sx={{ fontSize: 72, color: 'warning.main' }} />
-      <Typography variant="h5" fontWeight={700}>
+      <Typography variant="h5" sx={{ fontWeight: 700 }}>
         Under Construction
       </Typography>
       <Typography variant="body1" color="text.secondary">

@@ -35,12 +35,12 @@ export const LoginPage = () => {
 
         <Box component="form" onSubmit={handleSubmit((data) => mutate(data))} noValidate>
           <TextField
-            {...register('username')}
-            label="Username"
+            {...register('empId')}
+            label="Employee ID"
             fullWidth
             size="small"
-            error={!!errors.username}
-            helperText={errors.username?.message}
+            error={!!errors.empId}
+            helperText={errors.empId?.message}
             sx={{ mb: 2 }}
             autoComplete="username"
             autoFocus
@@ -62,7 +62,7 @@ export const LoginPage = () => {
             size="small"
             error={!!errors.password}
             helperText={errors.password?.message}
-            sx={{ mb: 3 }}
+            sx={{ mb: 3, '& input::-ms-reveal, & input::-ms-clear': { display: 'none' } }}
             autoComplete="current-password"
             slotProps={{
               input: {

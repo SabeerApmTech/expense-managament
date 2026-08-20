@@ -1,87 +1,85 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { enqueueSnackbar } from 'notistack';
+import { useQuery } from '@tanstack/react-query';
 import { expensesApi } from '../../../api/expenses.api';
-import type { SaveExpenseRequest, ExpenseFilters } from '../../../types/expense.types';
+import { useManagedMutation } from '../../../utils/mutations';
 
 export const EXPENSE_KEYS = {
   all: ['expenses'] as const,
-  lists: () => [...EXPENSE_KEYS.all, 'list'] as const,
-  list: (filters: ExpenseFilters) => [...EXPENSE_KEYS.lists(), filters] as const,
+  list: (empId: string) => [...EXPENSE_KEYS.all, 'list', empId] as const,
+  details: (empId: string, expenseId: number) => [...EXPENSE_KEYS.all, 'details', empId, expenseId] as const,
+  bills: (expenseDetailId: number) => [...EXPENSE_KEYS.all, 'bills', expenseDetailId] as const,
 };
 
-export const useExpenseList = (filters: ExpenseFilters = {}) => {
-  const params: Record<string, string> = {};
-  if (filters.fromDate) params.FromDate = filters.fromDate;
-  if (filters.toDate) params.ToDate = filters.toDate;
-  if (filters.status) params.Status = filters.status;
-  if (filters.expenseType) params.ExpenseTypeId = filters.expenseType;
+// Shared prefix with src/features/userManagement/hooks/useUserManagement.ts — kept as a
+// literal (not a cross-feature import) so add/edit/delete here also refreshes usage caps.
+const EXPENSE_TYPE_USAGE_PREFIX = ['expense-type-usage'] as const;
+const ALL_EXPENSE_TYPE_USAGE_PREFIX = ['all-expense-type-usage'] as const;
 
-  return useQuery({
-    queryKey: EXPENSE_KEYS.list(filters),
-    queryFn: () => expensesApi.list(params),
-    staleTime: 0,
+export const useExpenseList = (empId: string) =>
+  useQuery({
+    queryKey: EXPENSE_KEYS.list(empId),
+    queryFn: () => expensesApi.getExpenses(empId),
+    enabled: !!empId,
   });
-};
 
-export const useSaveExpense = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: SaveExpenseRequest) => expensesApi.save(data),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() }),
-        queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] }),
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-      ]);
-      enqueueSnackbar('Expense submitted successfully', { variant: 'success' });
-    },
-    onError: (error) => {
-      console.error('Save expense error:', error);
-      enqueueSnackbar('Failed to submit expense', { variant: 'error' });
-    },
+export const useExpenseDetails = (empId: string, expenseId: number | undefined) =>
+  useQuery({
+    queryKey: EXPENSE_KEYS.details(empId, expenseId ?? 0),
+    queryFn: () => expensesApi.getExpenseDetails(empId, expenseId as number),
+    enabled: !!empId && !!expenseId,
   });
-};
 
-export const useInitiatorApproveItem = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: { expenseId: number; status: number; reason?: string }) =>
-      expensesApi.initiatorApproveReject(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] });
-      enqueueSnackbar('Item approved', { variant: 'success' });
-    },
-    onError: () => enqueueSnackbar('Failed to approve item', { variant: 'error' }),
+export const useExpenseBills = (expenseDetailId: number | undefined) =>
+  useQuery({
+    queryKey: EXPENSE_KEYS.bills(expenseDetailId ?? 0),
+    queryFn: () => expensesApi.getBills(expenseDetailId as number),
+    enabled: !!expenseDetailId,
   });
-};
 
-export const useInitiatorRejectItem = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: { expenseId: number; status: number; reason?: string }) =>
-      expensesApi.initiatorApproveReject(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] });
-      enqueueSnackbar('Item rejected', { variant: 'info' });
-    },
-    onError: () => enqueueSnackbar('Failed to reject item', { variant: 'error' }),
-  });
-};
+export const useCreateExpenseDetail = (empId: string, expenseId?: number) =>
+  useManagedMutation(
+    (formData: FormData) => expensesApi.createExpenseDetail(formData),
+    [
+      EXPENSE_KEYS.list(empId),
+      ...(expenseId ? [EXPENSE_KEYS.details(empId, expenseId)] : []),
+      EXPENSE_TYPE_USAGE_PREFIX,
+      ALL_EXPENSE_TYPE_USAGE_PREFIX,
+    ],
+    { success: (result) => result.message ?? 'Expense submitted successfully', error: 'Failed to submit expense' }
+  );
 
-export const useDeleteExpense = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => expensesApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: EXPENSE_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: ['admin-expenses', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      enqueueSnackbar('Expense deleted successfully', { variant: 'success' });
-    },
-    onError: () => {
-      enqueueSnackbar('Failed to delete expense', { variant: 'error' });
-    },
-  });
-};
+export const useUpdateExpenseDetail = (empId: string, expenseId?: number, expenseDetailId?: number) =>
+  useManagedMutation(
+    (vars: { expenseDetailId: number; formData: FormData }) =>
+      expensesApi.updateExpenseDetail(vars.expenseDetailId, vars.formData),
+    [
+      EXPENSE_KEYS.list(empId),
+      ...(expenseId ? [EXPENSE_KEYS.details(empId, expenseId)] : []),
+      ...(expenseDetailId ? [EXPENSE_KEYS.bills(expenseDetailId)] : []),
+      EXPENSE_TYPE_USAGE_PREFIX,
+      ALL_EXPENSE_TYPE_USAGE_PREFIX,
+    ],
+    { success: (result) => result.message ?? 'Expense updated successfully', error: 'Failed to update expense' }
+  );
+
+export const useDeleteExpenseDetail = (empId: string, expenseId?: number) =>
+  useManagedMutation(
+    (expenseDetailId: number) => expensesApi.deleteExpenseDetail(empId, expenseDetailId),
+    [
+      EXPENSE_KEYS.list(empId),
+      ...(expenseId ? [EXPENSE_KEYS.details(empId, expenseId)] : []),
+      EXPENSE_TYPE_USAGE_PREFIX,
+      ALL_EXPENSE_TYPE_USAGE_PREFIX,
+    ],
+    { success: (result) => result.message ?? 'Expense deleted successfully', error: 'Failed to delete expense' }
+  );
+
+export const useDeleteBill = (empId: string, expenseId?: number, expenseDetailId?: number) =>
+  useManagedMutation(
+    (expenseBillId: number) => expensesApi.deleteBill(empId, expenseBillId),
+    [
+      EXPENSE_KEYS.list(empId),
+      ...(expenseId ? [EXPENSE_KEYS.details(empId, expenseId)] : []),
+      ...(expenseDetailId ? [EXPENSE_KEYS.bills(expenseDetailId)] : []),
+    ],
+    { success: (result) => result.message ?? 'Expense deleted successfully', error: 'Failed to delete expense' }
+  );

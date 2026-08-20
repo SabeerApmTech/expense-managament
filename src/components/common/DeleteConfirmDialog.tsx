@@ -11,6 +11,9 @@ interface Props {
   isDeleting: boolean;
   title?: string;
   message?: React.ReactNode;
+  confirmLabel?: string;
+  confirmIcon?: React.ReactNode;
+  confirmColor?: 'error' | 'warning' | 'primary' | 'success' | 'info';
 }
 
 export const DeleteConfirmDialog = ({
@@ -20,6 +23,9 @@ export const DeleteConfirmDialog = ({
   isDeleting,
   title = 'Confirm Delete',
   message = 'Are you sure you want to delete this item? This cannot be undone.',
+  confirmLabel = 'Delete',
+  confirmIcon = <DeleteIcon />,
+  confirmColor = 'error',
 }: Props) => (
   <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth
     slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
@@ -29,9 +35,9 @@ export const DeleteConfirmDialog = ({
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2 }}>
       <Button onClick={onClose} disabled={isDeleting}>Cancel</Button>
-      <Button variant="contained" color="error" onClick={onConfirm} disabled={isDeleting}
-        startIcon={isDeleting ? <CircularProgress size={14} color="inherit" /> : <DeleteIcon />}>
-        Delete
+      <Button variant="contained" color={confirmColor} onClick={onConfirm} disabled={isDeleting}
+        startIcon={isDeleting ? <CircularProgress size={14} color="inherit" /> : confirmIcon}>
+        {confirmLabel}
       </Button>
     </DialogActions>
   </Dialog>

@@ -1,33 +1,27 @@
-export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+export type Role = 'USER' | 'ADMIN' | 'SUPERADMIN';
 
 export interface LoginRequest {
-  username: string;
+  empId: string;
   password: string;
 }
 
 export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  designationId: number | null;
-  designation: string | null;
-  departmentId: number | null;
-  department: string | null;
-}
-
-export interface ApiUserPayload {
-  id: string;
-  name: string;
-  email: string;
-  role: number | string;
-  designationId: number | null;
-  designation: string | null;
-  departmentId: number | null;
-  department: string | null;
-}
-
-export interface ApiLoginResponse {
   token: string;
-  user: ApiUserPayload;
+  userId: number;
+  empId: string;
+  empName: string;
+  role: Role;
+  phoneNumber: string;
+  isActive: boolean;
+  isInitiator: boolean;
+  isAccountant: boolean;
 }
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  errors?: unknown;
+}
+
+export type ApiLoginResponse = ApiResponse<AuthUser>;

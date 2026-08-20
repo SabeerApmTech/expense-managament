@@ -41,6 +41,9 @@ interface Props<T> {
   onAdd?: () => void;
   addLabel?: string;
   rowActions?: (row: T) => ActionItem[];
+  onRowClick?: (row: T) => void;
+  /** Extra control(s) rendered in the toolbar, right before the PDF export icon. */
+  toolbarExtra?: React.ReactNode;
   pdfSummary?: { label: string; value: string }[];
   showSerialNo?: boolean;
   selectable?: boolean;
@@ -193,6 +196,8 @@ export function DataTable<T extends Record<string, unknown>>({
   onAdd,
   addLabel = 'Add',
   rowActions,
+  onRowClick,
+  toolbarExtra,
   pdfSummary,
   showSerialNo = false,
   selectable = false,
@@ -213,14 +218,15 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const dataColumns = columns.filter((c) => String(c.id) !== 'actions');
+  const safeRows = useMemo(() => (Array.isArray(rows) ? rows : []), [rows]);
 
   const filtered = useMemo(() => {
-    if (!search) return rows;
+    if (!search) return safeRows;
     const q = search.toLowerCase();
-    return rows.filter((row) =>
+    return safeRows.filter((row) =>
       Object.values(row).some((v) => String(v ?? '').toLowerCase().includes(q))
     );
-  }, [rows, search]);
+  }, [safeRows, search]);
 
   const sorted = useMemo(() => {
     if (!sort.field) return filtered;
@@ -325,9 +331,11 @@ export function DataTable<T extends Record<string, unknown>>({
             {addLabel}
           </Button>
         )}
+        {toolbarExtra}
         <IconButton
           size="small"
           title="Export PDF"
+          disabled={sorted.length === 0}
           onClick={() => exportPDF(columns, sorted, title ?? 'export', pdfSummary, showSerialNo)}
           sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
         >
@@ -336,6 +344,7 @@ export function DataTable<T extends Record<string, unknown>>({
         <IconButton
           size="small"
           title="Export CSV"
+          disabled={sorted.length === 0}
           onClick={() => exportCSV(columns, sorted, title ?? 'export', showSerialNo)}
           sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
         >
@@ -359,15 +368,20 @@ export function DataTable<T extends Record<string, unknown>>({
                 <Grid key={String(row[rowKey])} size={{ xs: 12, sm: 6 }}>
                   <Card
                     variant="outlined"
+                    onClick={() => onRowClick?.(row)}
                     sx={{
                       borderRadius: 2,
                       position: 'relative',
                       transition: 'box-shadow 0.2s',
+                      cursor: onRowClick ? 'pointer' : 'default',
                       '&:hover': { boxShadow: 3 },
                     }}
                   >
                     {selectable && (
-                      <Box sx={{ position: 'absolute', top: 2, left: 2, zIndex: 1 }}>
+                      <Box
+                        sx={{ position: 'absolute', top: 2, left: 2, zIndex: 1 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Checkbox
                           size="small"
                           checked={selectedSet.has(rowId)}
@@ -535,14 +549,16 @@ export function DataTable<T extends Record<string, unknown>>({
                 return (
                   <TableRow
                     key={String(row[rowKey])}
+                    onClick={() => onRowClick?.(row)}
                     sx={{
                       bgcolor: idx % 2 === 1 ? '#f0f4ff' : 'background.paper',
+                      cursor: onRowClick ? 'pointer' : 'default',
                       '&:hover': { bgcolor: '#e4ebff' },
                       '& td': { py: 0.75, px: 1.5, fontSize: 13, borderColor: 'rgba(200,210,255,0.5)' },
                     }}
                   >
                     {selectable && (
-                      <TableCell padding="checkbox">
+                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           size="small"
                           checked={selectedSet.has(rowId)}

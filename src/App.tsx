@@ -9,14 +9,12 @@ import {
   setStoredAuth,
   clearStoredAuth,
 } from "./store/authStore";
-import { authApi } from "./api/auth.api";
-import { usePushNotifications } from "./hooks/usePushNotifications";
 import { IosInstallBanner } from "./components/common/IosInstallBanner";
 import { UnderConstruction } from "./components/common/UnderConstruction";
 import type { AuthUser } from "./types/auth.types";
 
 // Toggle to false once the API overhaul is complete and the app is ready to go live again.
-const UNDER_CONSTRUCTION = true;
+const UNDER_CONSTRUCTION = false;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,12 +84,11 @@ export default function App() {
       user,
       isAuthenticated: !!user,
       role: user?.role ?? null,
-      login: (u: AuthUser, token: string) => {
-        setUser(u);
-        setStoredAuth(u, token);
+      login: (data: AuthUser) => {
+        setUser(data);
+        setStoredAuth(data);
       },
       logout: () => {
-        authApi.logout().catch(() => {});
         queryClient.clear();
         setUser(null);
         clearStoredAuth();
@@ -99,8 +96,6 @@ export default function App() {
     }),
     [user],
   );
-
-  usePushNotifications(authValue.isAuthenticated);
 
   if (UNDER_CONSTRUCTION) {
     return (

@@ -20,7 +20,7 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+    const isLoginRequest = error.config?.url?.includes('/api/user-authentication/login');
     if (error.response?.status === 401 && !isLoginRequest) {
       clearStoredAuth();
       window.location.href = '/login';

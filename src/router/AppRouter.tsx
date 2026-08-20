@@ -1,52 +1,50 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
-import { UserLayout } from '../components/layout/UserLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { ExpenseListPage } from '../features/expenses/pages/ExpenseListPage';
-import { AddExpensePage } from '../features/expenses/pages/AddExpensePage';
-import { EditExpensePage } from '../features/expenses/pages/EditExpensePage';
-import { ExpenseDetailsPage } from '../features/expenses/pages/ExpenseDetailsPage';
-import { ExpenseApprovalListPage } from '../features/admin/pages/ExpenseApprovalListPage';
-import { AdminExpenseDetailsPage } from '../features/admin/pages/AdminExpenseDetailsPage';
-import { AdminReportPage } from '../features/admin/pages/AdminReportPage';
-import { SettlementHistoryPage } from '../features/admin/pages/SettlementHistoryPage';
+import { ApprovalsListPage } from '../features/approvals/pages/ApprovalsListPage';
+import { UserManagementPage } from '../features/userManagement/pages/UserManagementPage';
+import { EmployeeExpenseUsagePage } from '../features/userManagement/pages/EmployeeExpenseUsagePage';
+import { AccountsListPage } from '../features/accounts/pages/AccountsListPage';
+import { SettlementReportPage } from '../features/accounts/pages/SettlementReportPage';
 import { useAuthContext } from '../store/authStore';
 import { getHomeRoute } from '../utils/routing';
+import { ROUTES } from '../constants/masterData';
+import { canAccessAccounts, canAccessApprovals, canAccessExpenses, canAccessUserManagement } from '../utils/access';
 
 export const AppRouter = () => {
-  const { isAuthenticated, role, user } = useAuthContext();
-  const homeRoute = getHomeRoute(role, user?.department);
+  const { isAuthenticated, role } = useAuthContext();
+  const homeRoute = getHomeRoute(role);
 
   return (
     <BrowserRouter>
       <Routes>
         <Route
-          path="/login"
+          path={ROUTES.LOGIN}
           element={isAuthenticated ? <Navigate to={homeRoute} replace /> : <LoginPage />}
         />
 
-        <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
-          <Route element={<UserLayout />}>
-            <Route path="/expenses" element={<ExpenseListPage />} />
-            <Route path="/expenses/add" element={<AddExpensePage />} />
-            <Route path="/expenses/:id/edit" element={<EditExpensePage />} />
-            <Route path="/expenses/:id" element={<ExpenseDetailsPage />} />
+        <Route element={<MainLayout />}>
+          <Route element={<ProtectedRoute allow={canAccessExpenses} />}>
+            <Route path={ROUTES.EXPENSES} element={<ExpenseListPage />} />
           </Route>
-        </Route>
-
-        <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} allowedDepartments={['Accounts']} />}>
-          <Route element={<MainLayout />}>
-            <Route path="/admin/approvals" element={<ExpenseApprovalListPage />} />
-            <Route path="/admin/approvals/:id" element={<AdminExpenseDetailsPage />} />
-            <Route path="/reports" element={<AdminReportPage />} />
-            <Route path="/settlement-history" element={<SettlementHistoryPage />} />
+          <Route element={<ProtectedRoute allow={canAccessApprovals} />}>
+            <Route path={ROUTES.APPROVALS} element={<ApprovalsListPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allow={canAccessAccounts} />}>
+            <Route path={ROUTES.ACCOUNTS} element={<AccountsListPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allow={canAccessUserManagement} />}>
+            <Route path={ROUTES.USER_MANAGEMENT} element={<UserManagementPage />} />
+            <Route path={ROUTES.EMPLOYEE_EXPENSE_USAGE} element={<EmployeeExpenseUsagePage />} />
+            <Route path={ROUTES.SETTLEMENT_REPORT} element={<SettlementReportPage />} />
           </Route>
         </Route>
 
         <Route
           path="/"
-          element={isAuthenticated ? <Navigate to={homeRoute} replace /> : <Navigate to="/login" replace />}
+          element={isAuthenticated ? <Navigate to={homeRoute} replace /> : <Navigate to={ROUTES.LOGIN} replace />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

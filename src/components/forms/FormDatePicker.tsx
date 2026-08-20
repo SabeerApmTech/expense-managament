@@ -40,6 +40,15 @@ export const FormDatePicker = ({ name, label, required, disabled, minDate, maxDa
                   error: !!fieldState.error,
                   helperText: fieldState.error?.message,
                 },
+                popper: {
+                  modifiers: [
+                    { name: 'flip', options: { fallbackPlacements: ['top-start', 'top-end', 'bottom-end'] } },
+                    {
+                      name: 'preventOverflow',
+                      options: { rootBoundary: 'viewport', altAxis: true, tether: false, padding: 8 },
+                    },
+                  ],
+                },
               }}
             />
           </Box>

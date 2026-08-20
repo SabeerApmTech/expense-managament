@@ -3,8 +3,9 @@ import { enqueueSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../../api/auth.api';
 import { useAuthContext } from '../../../store/authStore';
+import { getErrorMessage } from '../../../utils/apiEnvelope';
 import type { LoginRequest } from '../../../types/auth.types';
-import { ROUTES } from '../../../constants/masterData';
+import { getHomeRoute } from '../../../utils/routing';
 
 export const useLogin = () => {
   const { login } = useAuthContext();
@@ -12,19 +13,15 @@ export const useLogin = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: LoginRequest) => authApi.login(data),
-    onSuccess: ({ user, token }) => {
+    mutationFn: (data: LoginRequest) => authApi.login(data.empId, data.password),
+    onSuccess: ({ data: user, message }) => {
       queryClient.clear();
-      login(user, token);
-      enqueueSnackbar(`Welcome, ${user.name}!`, { variant: 'success' });
-      if (user.role === 'USER') {
-        navigate(ROUTES.USER.EXPENSES);
-      } else {
-        navigate(ROUTES.ADMIN.APPROVALS);
-      }
+      login(user);
+      enqueueSnackbar(message ?? `Welcome, ${user.empName}!`, { variant: 'success' });
+      navigate(getHomeRoute(user.role));
     },
-    onError: () => {
-      enqueueSnackbar('Invalid credentials. Please try again.', { variant: 'error' });
+    onError: (error) => {
+      enqueueSnackbar(getErrorMessage(error, 'Invalid credentials. Please try again.'), { variant: 'error' });
     },
   });
 };
