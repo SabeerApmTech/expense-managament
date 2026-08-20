@@ -10,11 +10,29 @@ export const BILL_BASE_URL = 'https://expense.apmiot.com/';
 export const resolveBillUrl = (bill: string): string =>
   bill.startsWith('http') ? bill : BILL_BASE_URL + bill;
 
+function normalizeExpense(entry: unknown): ExpenseSummary {
+  const e = entry as Partial<ExpenseSummary>;
+  return {
+    expenseId: e.expenseId ?? 0,
+    expenseCode: e.expenseCode ?? '',
+    empId: e.empId ?? '',
+    empName: e.empName ?? '',
+    totalAmount: e.totalAmount ?? 0,
+    submittedOn: e.submittedOn ?? '',
+    pendingCount: e.pendingCount ?? 0,
+    approvedCount: e.approvedCount ?? 0,
+    rejectedCount: e.rejectedCount ?? 0,
+    pending: Array.isArray(e.pending) ? e.pending : [],
+    approved: Array.isArray(e.approved) ? e.approved : [],
+    rejected: Array.isArray(e.rejected) ? e.rejected : [],
+  };
+}
+
 export const expensesApi = {
   getExpenses: async (empId: string): Promise<ExpenseSummary[]> => {
     const response = await apiClient.get(`/api/expenses/${empId}/get`);
     const { data } = unwrap<EmployeeExpensesListResponse>(response.data);
-    return Array.isArray(data?.expenses) ? data.expenses : [];
+    return Array.isArray(data?.expenses) ? data.expenses.map(normalizeExpense) : [];
   },
 
   getExpenseDetails: async (empId: string, expenseId: number): Promise<ExpenseDetailItem[]> => {

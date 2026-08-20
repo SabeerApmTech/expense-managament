@@ -27,8 +27,10 @@ export const ExpenseUsageSummary = ({ empId }: Props) => {
         }}
       >
         {usage.map((item) => {
-          const pct = item.limitAmount > 0 ? Math.min(100, (item.spentThisMonth / item.limitAmount) * 100) : 0;
-          const exhausted = item.remainingAmount <= 0;
+          const spent = item.settledAmount;
+          const remaining = item.limitAmount - spent;
+          const pct = item.limitAmount > 0 ? Math.min(100, (spent / item.limitAmount) * 100) : 0;
+          const exhausted = remaining <= 0;
           const nearLimit = !exhausted && pct >= 80;
           const status: 'success' | 'warning' | 'error' = exhausted ? 'error' : nearLimit ? 'warning' : 'success';
           const isOffice = item.expenseCategory === 'Office';
@@ -90,10 +92,10 @@ export const ExpenseUsageSummary = ({ empId }: Props) => {
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                  {formatCurrency(item.spentThisMonth)} / {formatCurrency(item.limitAmount)}
+                  {formatCurrency(spent)} / {formatCurrency(item.limitAmount)}
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, color: `${status}.main`, whiteSpace: 'nowrap' }}>
-                  {exhausted ? 'Limit reached' : `${formatCurrency(item.remainingAmount)} left`}
+                  {exhausted ? 'Limit reached' : `${formatCurrency(remaining)} left`}
                 </Typography>
               </Box>
             </Paper>
@@ -101,5 +103,5 @@ export const ExpenseUsageSummary = ({ empId }: Props) => {
         })}
       </Box>
     </Box>
-  );``
+  );
 };

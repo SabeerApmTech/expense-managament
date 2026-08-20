@@ -15,6 +15,7 @@ import { useState, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Column, PaginationState, SortState } from '../../types/common.types';
+import { exportGroupedExcel, pdfSafe } from '../../utils/tableExport';
 import { LoadingState } from './LoadingState';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
@@ -52,36 +53,26 @@ interface Props<T> {
   isRowSelectable?: (row: T) => boolean;
 }
 
-function exportCSV<T extends Record<string, unknown>>(
+function exportExcel<T extends Record<string, unknown>>(
   columns: Column<T>[],
   rows: T[],
   filename: string,
   showSerialNo?: boolean
 ) {
   const cols = columns.filter((c) => String(c.id) !== 'actions');
-  const header = [...(showSerialNo ? ['"S.No"'] : []), ...cols.map((c) => '"' + c.label + '"')].join(',');
-  const body = rows.map((row, idx) =>
-    [
-      ...(showSerialNo ? [String(idx + 1)] : []),
-      ...cols.map((c) => {
-        const val = row[c.id as keyof T];
-        const text = c.exportValue ? c.exportValue(val, row) : String(val ?? '');
-        return '"' + text.replace(/"/g, '""') + '"';
-      }),
-    ].join(',')
-  );
-  const csv = [header, ...body].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (filename || 'export') + '.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  exportGroupedExcel(filename, [
+    {
+      columns: [...(showSerialNo ? ['S.No'] : []), ...cols.map((c) => c.label)],
+      rows: rows.map((row, idx) => [
+        ...(showSerialNo ? [String(idx + 1)] : []),
+        ...cols.map((c) => {
+          const val = row[c.id as keyof T];
+          return c.exportValue ? c.exportValue(val, row) : String(val ?? '');
+        }),
+      ]),
+    },
+  ]);
 }
-
-const pdfSafe = (str: string) =>
-  Array.from(str.replace(/₹/g, 'Rs. '), (char) => (char.charCodeAt(0) <= 0x7f ? char : '?')).join('');
 
 function exportPDF<T extends Record<string, unknown>>(
   columns: Column<T>[],
@@ -343,9 +334,9 @@ export function DataTable<T extends Record<string, unknown>>({
         </IconButton>
         <IconButton
           size="small"
-          title="Export CSV"
+          title="Export Excel"
           disabled={sorted.length === 0}
-          onClick={() => exportCSV(columns, sorted, title ?? 'export', showSerialNo)}
+          onClick={() => exportExcel(columns, sorted, title ?? 'export', showSerialNo)}
           sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
         >
           <GridOnIcon fontSize="small" />

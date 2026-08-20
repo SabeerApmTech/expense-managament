@@ -4,6 +4,8 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import GridOnIcon from '@mui/icons-material/GridOn';
 import { Fragment, useMemo, useState } from 'react';
 import { LoadingState } from '../../../components/common/LoadingState';
 import { EmptyState } from '../../../components/common/EmptyState';
@@ -12,6 +14,7 @@ import { ApprovalDrawer } from '../components/ApprovalDrawer';
 import { useApprovalEmployeeExpenses } from '../hooks/useApprovals';
 import { useAuthContext } from '../../../store/authStore';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
+import { exportGroupedPDF, exportGroupedExcel } from '../../../utils/tableExport';
 import type { ApprovalExpenseDetail } from '../../../types/approval.types';
 
 type FlatRow = ApprovalExpenseDetail & { empName: string };
@@ -68,35 +71,66 @@ export const ApprovalsListPage = () => {
     return order.map((code) => [code, map.get(code) as FlatRow[]] as const);
   }, [filtered]);
 
+  const exportSections = useMemo(
+    () =>
+      groups.map(([expenseCode, items]) => ({
+        heading: `${expenseCode} · ${items[0].empName}`,
+        meta: `Submitted ${formatDate(items[0].submittedOn)} · Total ${formatCurrency(items.reduce((s, i) => s + i.amount, 0))}`,
+        columns: ['Expense Type', 'Amount'],
+        rows: items.map((item) => [item.expenseTypeName, formatCurrency(item.amount)]),
+      })),
+    [groups]
+  );
+
   const openDrawer = (expenseId: number) => setSelectedExpenseId(expenseId);
 
   return (
-    <Box>
-      <Tabs value={tab} onChange={(_e, v) => { setTab(v); setSearch(''); }} sx={{ mb: 2.5 }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Tabs value={tab} onChange={(_e, v) => { setTab(v); setSearch(''); }} sx={{ mb: 2.5, flexShrink: 0 }}>
         <Tab label={`Pending (${totals.pending})`} />
         <Tab label={`Approved (${totals.approved})`} />
         <Tab label={`Rejected (${totals.rejected})`} />
       </Tabs>
 
-      <Paper variant="outlined" sx={{ borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, px: 2.5, py: 2 }}>
+      <Paper variant="outlined" sx={{ borderRadius: 2, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, px: 2.5, py: 2, flexShrink: 0 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{TAB_TITLES[tab]}</Typography>
-          <TextField
-            size="small"
-            placeholder="Search employee, expense code, or type..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            sx={{ minWidth: 260 }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              size="small"
+              placeholder="Search employee, expense code, or type..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              sx={{ minWidth: 260 }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+            <IconButton
+              size="small"
+              title="Export PDF"
+              disabled={exportSections.length === 0}
+              onClick={() => exportGroupedPDF(TAB_TITLES[tab], exportSections)}
+              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
+            >
+              <PictureAsPdfIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              title="Export Excel"
+              disabled={exportSections.length === 0}
+              onClick={() => exportGroupedExcel(TAB_TITLES[tab], exportSections)}
+              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
+            >
+              <GridOnIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
 
         {isLoading ? (
@@ -106,7 +140,7 @@ export const ApprovalsListPage = () => {
         ) : groups.length === 0 ? (
           <EmptyState />
         ) : (
-          <Box sx={{ overflow: 'auto', maxHeight: 'calc(100vh - 320px)' }}>
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>

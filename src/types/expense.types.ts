@@ -3,27 +3,6 @@ import type { ApiResponse } from './auth.types';
 export type ExpenseStatus = 'Pending' | 'Approved' | 'Rejected';
 export type SettlementStatus = 'Not Created' | 'Pending' | 'Settled';
 
-export interface ExpenseSummary {
-  expenseId: number;
-  expenseCode: string;
-  empId: string;
-  empName: string;
-  totalAmount: number;
-  submittedOn: string;
-  pendingCount: number;
-  approvedCount: number;
-  rejectedCount: number;
-}
-
-export interface EmployeeExpensesListResponse {
-  empId: string;
-  empName: string;
-  pendingCount: number;
-  approvedCount: number;
-  rejectedCount: number;
-  expenses: ExpenseSummary[];
-}
-
 export interface ExpenseDetailItem {
   expenseDetailId: number;
   expenseId: number;
@@ -43,6 +22,32 @@ export interface ExpenseDetailItem {
   atLevel: number | null;
   status: ExpenseStatus;
   settlementStatus: SettlementStatus;
+  rejectedReason?: string | null;
+  settlementBill?: { settlementBillId: number; settlementBillPath: string } | null;
+}
+
+// The detail lists (pending/approved/rejected) are embedded per expense so one
+// expense with items in multiple states can be viewed as three tabs without a
+// separate detail-fetch call.
+export interface ExpenseSummary {
+  expenseId: number;
+  expenseCode: string;
+  empId: string;
+  empName: string;
+  totalAmount: number;
+  submittedOn: string;
+  pendingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  pending: ExpenseDetailItem[];
+  approved: ExpenseDetailItem[];
+  rejected: ExpenseDetailItem[];
+}
+
+export interface EmployeeExpensesListResponse {
+  empId: string;
+  empName: string;
+  expenses: ExpenseSummary[];
 }
 
 // Returned by the create/update expense-detail endpoints — a lighter summary,

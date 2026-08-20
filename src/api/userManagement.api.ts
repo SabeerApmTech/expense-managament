@@ -24,9 +24,20 @@ function normalizeUsageEntry(entry: unknown): EmployeeExpenseTypeUsage[] {
       ...item,
       empId: item.empId ?? envelope.empId ?? '',
       empName: item.empName ?? envelope.empName ?? '',
+      settledAmount: item.settledAmount ?? 0,
+      pendingAmount: item.pendingAmount ?? 0,
+      remainingAmount: item.remainingAmount ?? 0,
     }));
   }
-  if ('expenseTypeId' in entry) return [entry as EmployeeExpenseTypeUsage];
+  if ('expenseTypeId' in entry) {
+    const item = entry as EmployeeExpenseTypeUsage;
+    return [{
+      ...item,
+      settledAmount: item.settledAmount ?? 0,
+      pendingAmount: item.pendingAmount ?? 0,
+      remainingAmount: item.remainingAmount ?? 0,
+    }];
+  }
   return [];
 }
 

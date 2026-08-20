@@ -73,7 +73,8 @@ export interface EmployeeExpenseTypeUsage {
   expenseTypeName: string;
   expenseCategory: ExpenseCategory;
   limitAmount: number;
-  spentThisMonth: number;
+  settledAmount: number;
+  pendingAmount: number;
   remainingAmount: number;
   createdByEmpId: string;
   createdByEmpName: string;

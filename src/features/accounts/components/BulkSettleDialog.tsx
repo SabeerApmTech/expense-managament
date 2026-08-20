@@ -36,9 +36,6 @@ export const BulkSettleDialog = ({ open, expenses, onClose, onSettled }: Props) 
     const formData = new FormData();
     formData.append('AccountantEmpId', user.empId);
     expenses.forEach((e) => formData.append('ExpenseIds', String(e.expenseId)));
-    expenses.forEach((e) => {
-      e.details.filter((i) => !i.isSettled).forEach((i) => formData.append('ExpenseDetailIds', String(i.expenseDetailId)));
-    });
     formData.append('SettlementBill', bill);
 
     settleMutation.mutate(formData, {

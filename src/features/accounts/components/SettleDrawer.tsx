@@ -35,7 +35,11 @@ function SettleDrawerContent({ expenseCode }: { expenseCode: string }) {
   // Until the accountant touches a checkbox, default to every unsettled item.
   const defaultSelectedIds = (expense?.details ?? []).filter((i) => !i.isSettled).map((i) => i.expenseDetailId);
   const effectiveSelectedIds = selectedIds ?? defaultSelectedIds;
-  const justSettledIds = new Set(result?.settledExpenseItems.map((i) => i.expenseDetailId) ?? []);
+  // Only meaningful once a settle has actually succeeded — falls back to the ids that
+  // were submitted if the response doesn't echo back settledExpenseItems.
+  const justSettledIds = new Set(
+    result ? (result.settledExpenseItems?.map((i) => i.expenseDetailId) ?? effectiveSelectedIds) : []
+  );
 
   const toggleItem = (id: number, checked: boolean) => {
     setSelectedIds((current) => {
@@ -59,7 +63,6 @@ function SettleDrawerContent({ expenseCode }: { expenseCode: string }) {
 
     const formData = new FormData();
     formData.append('AccountantEmpId', user.empId);
-    formData.append('ExpenseIds', String(expense.expenseId));
     effectiveSelectedIds.forEach((id) => formData.append('ExpenseDetailIds', String(id)));
     formData.append('SettlementBill', bill);
 
@@ -87,13 +90,16 @@ function SettleDrawerContent({ expenseCode }: { expenseCode: string }) {
 
       {result && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          Settled {formatCurrency(result.settlementAmount)} on {formatDateTime(result.settlementBill.createdAt)}.{' '}
-          <Button
-            size="small"
-            onClick={() => setViewerUrl(resolveSettlementBillUrl(result.settlementBill.settlementBillPath))}
-          >
-            View Bill
-          </Button>
+          Settled {formatCurrency(result.settlementAmount ?? selectedAmount)}
+          {result.settlementBill?.createdAt && <> on {formatDateTime(result.settlementBill.createdAt)}</>}.{' '}
+          {result.settlementBill?.settlementBillPath && (
+            <Button
+              size="small"
+              onClick={() => setViewerUrl(resolveSettlementBillUrl(result.settlementBill.settlementBillPath))}
+            >
+              View Bill
+            </Button>
+          )}
         </Alert>
       )}
 

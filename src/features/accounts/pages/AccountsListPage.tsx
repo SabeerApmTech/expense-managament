@@ -106,12 +106,14 @@ export const AccountsListPage = () => {
   const [tab, setTab] = useState(0);
 
   return (
-    <Box>
-      <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ mb: 2.5 }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ mb: 2.5, flexShrink: 0 }}>
         <Tab label="Pending Settlements" />
         <Tab label="Settled Expenses" />
       </Tabs>
-      {tab === 0 ? <PendingSettlementsTab /> : <SettledExpensesTab />}
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {tab === 0 ? <PendingSettlementsTab /> : <SettledExpensesTab />}
+      </Box>
     </Box>
   );
 };

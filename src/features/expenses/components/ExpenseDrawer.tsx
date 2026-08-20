@@ -1,5 +1,5 @@
 import {
-  Drawer, Box, Typography, IconButton, Divider, Paper, Chip, CircularProgress, Button,
+  Drawer, Box, Typography, IconButton, Divider, Paper, Chip, Button, Tabs, Tab,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -9,7 +9,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CircleIcon from '@mui/icons-material/Circle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ExpenseForm } from './ExpenseForm';
 import { Field, FieldLabel } from '../../../components/common/Field';
 import { BillViewerDialog } from '../../../components/common/BillViewerDialog';
@@ -19,16 +19,18 @@ import {
   useUpdateExpenseDetail, useDeleteExpenseDetail, useDeleteBill,
 } from '../hooks/useExpenses';
 import { resolveBillUrl } from '../../../api/expenses.api';
+import { resolveSettlementBillUrl } from '../../../api/accounts.api';
 import { useAuthContext } from '../../../store/authStore';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import type { ExpenseDetailFormValues } from '../schemas/expense.schema';
-import type { ExpenseDetailItem } from '../../../types/expense.types';
+import type { ExpenseDetailItem, ExpenseSummary } from '../../../types/expense.types';
 
 export type DrawerMode = 'add' | 'view' | null;
 
 interface Props {
   mode: DrawerMode;
-  expenseId?: number;
+  expense: ExpenseSummary | null;
+  initialTab?: number;
   onClose: () => void;
 }
 
@@ -51,19 +53,20 @@ function buildFormData(empId: string, expenseId: number | undefined, values: Exp
 }
 
 function DetailBills({
-  empId, expenseId, expenseDetailId, canDelete, onView,
+  empId, expenseId, expenseDetailId, canDelete, settlementBillPath, onView,
 }: {
   empId: string;
   expenseId: number;
   expenseDetailId: number;
   canDelete: boolean;
+  settlementBillPath?: string;
   onView: (url: string) => void;
 }) {
   const { data: bills = [] } = useExpenseBills(expenseDetailId);
   const deleteBillMutation = useDeleteBill(empId, expenseId, expenseDetailId);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
 
-  if (!bills.length) return null;
+  if (!bills.length && !settlementBillPath) return null;
 
   return (
     <Box>
@@ -75,7 +78,7 @@ function DetailBills({
             sx={{ display: 'flex', alignItems: 'center', border: 1, borderColor: 'divider', borderRadius: 1 }}
           >
             <Button size="small" onClick={() => onView(resolveBillUrl(bill.bill))}>
-              View Bill{bills.length > 1 ? ` ${i + 1}` : ''}
+              View Expense Bill{bills.length > 1 ? ` ${i + 1}` : ''}
             </Button>
             {canDelete && (
               <IconButton size="small" color="error" onClick={() => setDeleteTarget(bill.expenseBillId)} sx={{ mr: 0.25 }}>
@@ -84,6 +87,13 @@ function DetailBills({
             )}
           </Box>
         ))}
+        {settlementBillPath && (
+          <Box sx={{ display: 'flex', alignItems: 'center', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+            <Button size="small" onClick={() => onView(resolveSettlementBillUrl(settlementBillPath))}>
+              View Settlement Bill
+            </Button>
+          </Box>
+        )}
       </Box>
       <DeleteConfirmDialog
         open={deleteTarget !== null}
@@ -179,11 +189,12 @@ function ApprovalTimeline({
 }
 
 function DetailCard({
-  detail, empId, expenseId, onViewBill,
+  detail, empId, expenseId, settlementBillPath, onViewBill,
 }: {
   detail: ExpenseDetailItem;
   empId: string;
   expenseId: number;
+  settlementBillPath?: string;
   onViewBill: (url: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -268,12 +279,16 @@ function DetailCard({
         <Field label="Initiated By" value={detail.initiatedByEmpName} compact />
       </Box>
       {detail.description && <Field label="Description" value={detail.description} compact />}
+      {detail.status === 'Rejected' && detail.rejectedReason && (
+        <Field label="Rejection Reason" value={detail.rejectedReason} compact />
+      )}
       <Box sx={{ mt: 1.5 }}>
         <DetailBills
           empId={empId}
           expenseId={expenseId}
           expenseDetailId={detail.expenseDetailId}
           canDelete={false}
+          settlementBillPath={detail.settlementStatus === 'Settled' ? settlementBillPath : undefined}
           onView={onViewBill}
         />
       </Box>
@@ -308,46 +323,78 @@ function AddItemToExpense({ empId, expenseId, onDone }: { empId: string; expense
   );
 }
 
-function ViewContent({ empId, expenseId }: { empId: string; expenseId: number }) {
-  const { data: details = [], isLoading } = useExpenseDetails(empId, expenseId);
+function ViewContent({ empId, expense, initialTab }: { empId: string; expense: ExpenseSummary; initialTab?: number }) {
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
+  const [tab, setTab] = useState(
+    () => initialTab ?? (expense.pendingCount > 0 ? 0 : expense.approvedCount > 0 ? 1 : 2)
+  );
 
-  if (isLoading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}><CircularProgress /></Box>;
-  }
+  // The embedded pending/approved/rejected arrays from the list endpoint don't carry
+  // settlementBill — only the per-expense details endpoint does — so look it up there,
+  // keyed by expenseDetailId, once per opened expense.
+  const { data: expenseDetails } = useExpenseDetails(empId, expense.expenseId);
+  const settlementBillByDetailId = useMemo(() => {
+    const map = new Map<number, string>();
+    (expenseDetails ?? []).forEach((d) => {
+      if (d.settlementBill?.settlementBillPath) map.set(d.expenseDetailId, d.settlementBill.settlementBillPath);
+    });
+    return map;
+  }, [expenseDetails]);
+
+  const tabs = [
+    { label: 'Pending', count: expense.pendingCount, details: expense.pending },
+    { label: 'Approved', count: expense.approvedCount, details: expense.approved },
+    { label: 'Rejected', count: expense.rejectedCount, details: expense.rejected },
+  ];
+  const details = tabs[tab].details;
 
   // Once the Initiator has acted on any item in this expense, it's locked from
   // further additions too.
-  const canAddItem = details.every((d) => d.status === 'Pending' && (d.atLevel ?? 1) <= 1);
+  const canAddItem = expense.approvedCount === 0 && expense.rejectedCount === 0
+    && expense.pending.every((d) => (d.atLevel ?? 1) <= 1);
 
   return (
-    <Box sx={{ p: 2.5 }}>
-      {addingItem ? (
-        <AddItemToExpense empId={empId} expenseId={expenseId} onDone={() => setAddingItem(false)} />
-      ) : canAddItem ? (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <IconButton
-            size="small"
-            color="primary"
-            title="Add another item to this expense"
-            onClick={() => setAddingItem(true)}
-            sx={{ border: '1px solid', borderColor: 'primary.main' }}
-          >
-            <AddIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      ) : null}
-      {details.map((detail) => (
-        <DetailCard
-          key={detail.expenseDetailId}
-          detail={detail}
-          empId={empId}
-          expenseId={expenseId}
-          onViewBill={setViewerUrl}
-        />
-      ))}
-      {viewerUrl && <BillViewerDialog open={!!viewerUrl} url={viewerUrl} onClose={() => setViewerUrl(null)} />}
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ px: 2.5, flexShrink: 0, borderBottom: '1px solid', borderColor: 'divider' }}>
+        {tabs.map((t, i) => (
+          <Tab key={t.label} label={`${t.label} (${t.count})`} value={i} />
+        ))}
+      </Tabs>
+      <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
+        {addingItem ? (
+          <AddItemToExpense empId={empId} expenseId={expense.expenseId} onDone={() => setAddingItem(false)} />
+        ) : canAddItem ? (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <IconButton
+              size="small"
+              color="primary"
+              title="Add another item to this expense"
+              onClick={() => setAddingItem(true)}
+              sx={{ border: '1px solid', borderColor: 'primary.main' }}
+            >
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        ) : null}
+        {details.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 5 }}>
+            No {tabs[tab].label.toLowerCase()} items
+          </Typography>
+        ) : (
+          details.map((detail) => (
+            <DetailCard
+              key={detail.expenseDetailId}
+              detail={detail}
+              empId={empId}
+              expenseId={expense.expenseId}
+              settlementBillPath={settlementBillByDetailId.get(detail.expenseDetailId)}
+              onViewBill={setViewerUrl}
+            />
+          ))
+        )}
+        {viewerUrl && <BillViewerDialog open={!!viewerUrl} url={viewerUrl} onClose={() => setViewerUrl(null)} />}
+      </Box>
     </Box>
   );
 }
@@ -356,15 +403,20 @@ function AddContent({ empId, onClose }: { empId: string; onClose: () => void }) 
   const [expenseId, setExpenseId] = useState<number | undefined>(undefined);
   const [formKey, setFormKey] = useState(0);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
-  const createMutation = useCreateExpenseDetail(empId, expenseId);
-  const { data: details = [] } = useExpenseDetails(empId, expenseId);
+  const { data: details = [], isLoading: isLoadingDetails } = useExpenseDetails(empId, expenseId);
+
+  // If every item just added under this expenseId gets deleted (back to zero items),
+  // treat it as if nothing was created yet, so the next submit starts a genuinely
+  // fresh expense instead of silently re-attaching to the now-empty one.
+  const effectiveExpenseId = !isLoadingDetails && details.length === 0 ? undefined : expenseId;
+  const createMutation = useCreateExpenseDetail(empId, effectiveExpenseId);
 
   const runningTotal = details.reduce((sum, d) => sum + d.amount, 0);
 
   const handleSubmit = (values: ExpenseDetailFormValues) => {
-    createMutation.mutate(buildFormData(empId, expenseId, values), {
+    createMutation.mutate(buildFormData(empId, effectiveExpenseId, values), {
       onSuccess: (result) => {
-        if (!expenseId) setExpenseId(result.data.expenseId);
+        if (!effectiveExpenseId) setExpenseId(result.data.expenseId);
         setFormKey((k) => k + 1);
       },
     });
@@ -408,7 +460,7 @@ function AddContent({ empId, onClose }: { empId: string; onClose: () => void }) 
 
 const TITLE: Record<string, string> = { add: 'Add Expense', view: 'Expense Details' };
 
-export const ExpenseDrawer = ({ mode, expenseId, onClose }: Props) => {
+export const ExpenseDrawer = ({ mode, expense, initialTab, onClose }: Props) => {
   const { user } = useAuthContext();
   const empId = user?.empId ?? '';
 
@@ -431,9 +483,15 @@ export const ExpenseDrawer = ({ mode, expenseId, onClose }: Props) => {
         </IconButton>
       </Box>
       <Divider sx={{ flexShrink: 0 }} />
-      <Box sx={{ flex: 1, overflowY: 'auto' }}>
-        {mode === 'view' && expenseId && <ViewContent empId={empId} expenseId={expenseId} />}
-        {mode === 'add' && <AddContent empId={empId} onClose={onClose} />}
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {mode === 'view' && expense && (
+          <ViewContent key={expense.expenseId} empId={empId} expense={expense} initialTab={initialTab} />
+        )}
+        {mode === 'add' && (
+          <Box sx={{ flex: 1, overflowY: 'auto' }}>
+            <AddContent empId={empId} onClose={onClose} />
+          </Box>
+        )}
       </Box>
     </Drawer>
   );

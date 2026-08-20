@@ -23,6 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'User Management', path: ROUTES.USER_MANAGEMENT, icon: <PeopleAltIcon />, show: canAccessUserManagement },
   { label: 'Employee Expense Usage', path: ROUTES.EMPLOYEE_EXPENSE_USAGE, icon: <QueryStatsIcon />, show: canAccessUserManagement },
   { label: 'Settlement Report', path: ROUTES.SETTLEMENT_REPORT, icon: <AssessmentIcon />, show: canAccessUserManagement },
+  { label: 'My Settlements', path: ROUTES.MY_SETTLEMENTS, icon: <AssessmentIcon />, show: canAccessExpenses },
 ];
 
 export const useVisibleNavItems = (): NavItem[] => {

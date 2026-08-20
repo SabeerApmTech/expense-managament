@@ -140,7 +140,7 @@ function FormFields({ originalExpenseTypeId, originalAmount = 0 }: FormFieldsPro
     .map((i) => ({ value: i.empId, label: i.empName }));
 
   const monthStart = dayjs().startOf('month').format('YYYY-MM-DD');
-  const monthEnd = dayjs().endOf('month').format('YYYY-MM-DD');
+  const today = dayjs().format('YYYY-MM-DD');
 
   return (
     <Grid container spacing={2}>
@@ -153,7 +153,8 @@ function FormFields({ originalExpenseTypeId, originalAmount = 0 }: FormFieldsPro
       {selectedUsage && (
         <Grid size={{ xs: 12 }}>
           <Alert severity={effectiveRemaining! <= 0 || amountExceedsLimit ? 'error' : 'info'} sx={{ py: 0.5 }}>
-            Monthly limit for {selectedUsage.expenseTypeName}: {formatCurrency(selectedUsage.limitAmount)} · Spent: {formatCurrency(selectedUsage.spentThisMonth)} ·{' '}
+            Monthly limit for {selectedUsage.expenseTypeName}: {formatCurrency(selectedUsage.limitAmount)}{' '}
+            (Settled: {formatCurrency(selectedUsage.settledAmount)} · Pending: {formatCurrency(selectedUsage.pendingAmount)}) ·{' '}
             <strong>Remaining: {formatCurrency(effectiveRemaining!)}</strong>
             {amountExceedsLimit && (
               <> — amount exceeds remaining limit by <strong>{formatCurrency(Number(amount) - effectiveRemaining!)}</strong></>
@@ -165,10 +166,10 @@ function FormFields({ originalExpenseTypeId, originalAmount = 0 }: FormFieldsPro
         <FormTextField name="amount" label="Amount (₹)" type="number" required />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
-        <FormDatePicker name="fromDate" label="From Date" required minDate={monthStart} maxDate={monthEnd} />
+        <FormDatePicker name="fromDate" label="From Date" required minDate={monthStart} maxDate={today} />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
-        <FormDatePicker name="toDate" label="To Date" required minDate={fromDate || monthStart} maxDate={monthEnd} />
+        <FormDatePicker name="toDate" label="To Date" required minDate={fromDate || monthStart} maxDate={today} />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
         <FormSelect name="paymentMode" label="Payment Mode" options={PAYMENT_MODE_OPTIONS} required />

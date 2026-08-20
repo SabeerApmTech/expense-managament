@@ -7,6 +7,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import GridOnIcon from '@mui/icons-material/GridOn';
 import { Fragment, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { LoadingState } from '../../../components/common/LoadingState';
@@ -17,6 +19,7 @@ import { useSettledExpenses } from '../hooks/useAccounts';
 import { useAuthContext } from '../../../store/authStore';
 import { resolveSettlementBillUrl } from '../../../api/accounts.api';
 import { formatCurrency, formatDateTime } from '../../../utils/formatters';
+import { exportGroupedPDF, exportGroupedExcel } from '../../../utils/tableExport';
 import type { SettledExpenseRecord } from '../../../types/accounts.types';
 
 export const SettledExpensesTab = () => {
@@ -61,10 +64,21 @@ export const SettledExpensesTab = () => {
     return order.map((code) => [code, map.get(code) as SettledExpenseRecord[]] as const);
   }, [filtered]);
 
+  const exportSections = useMemo(
+    () =>
+      groups.map(([expenseCode, items]) => ({
+        heading: `${expenseCode} · ${items[0].empName}`,
+        meta: `Total ${formatCurrency(items.reduce((s, i) => s + i.settledAmount, 0))}`,
+        columns: ['Expense Type', 'Settled Amount', 'Settled On'],
+        rows: items.map((item) => [item.expenseTypeName, formatCurrency(item.settledAmount), formatDateTime(item.settlementDate)]),
+      })),
+    [groups]
+  );
+
   return (
-    <Box>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 2.5, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2.5, flexWrap: 'wrap', alignItems: 'flex-end', flexShrink: 0 }}>
           <DatePicker
             label="From Date"
             value={dayjs(fromDate)}
@@ -91,31 +105,51 @@ export const SettledExpensesTab = () => {
       </LocalizationProvider>
 
       {data && (
-        <Paper variant="outlined" sx={{ px: 2.5, py: 1.5, mb: 2.5, borderRadius: 2, display: 'inline-flex', gap: 1.5, alignItems: 'baseline' }}>
+        <Paper variant="outlined" sx={{ px: 2.5, py: 1.5, mb: 2.5, borderRadius: 2, display: 'inline-flex', gap: 1.5, alignItems: 'baseline', flexShrink: 0 }}>
           <Typography variant="body2" color="text.secondary">Total Settled</Typography>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatCurrency(data.totalSettledAmount)}</Typography>
         </Paper>
       )}
 
-      <Paper variant="outlined" sx={{ borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, px: 2.5, py: 2 }}>
+      <Paper variant="outlined" sx={{ borderRadius: 2, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, px: 2.5, py: 2, flexShrink: 0 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Settled Expenses</Typography>
-          <TextField
-            size="small"
-            placeholder="Search settled expenses..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            sx={{ minWidth: 260 }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              size="small"
+              placeholder="Search settled expenses..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              sx={{ minWidth: 260 }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+            <IconButton
+              size="small"
+              title="Export PDF"
+              disabled={exportSections.length === 0}
+              onClick={() => exportGroupedPDF('Settled Expenses', exportSections)}
+              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
+            >
+              <PictureAsPdfIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              title="Export Excel"
+              disabled={exportSections.length === 0}
+              onClick={() => exportGroupedExcel('Settled Expenses', exportSections)}
+              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
+            >
+              <GridOnIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
 
         {isLoading ? (
@@ -125,7 +159,7 @@ export const SettledExpensesTab = () => {
         ) : groups.length === 0 ? (
           <EmptyState />
         ) : (
-          <Box sx={{ overflow: 'auto', maxHeight: 'calc(100vh - 320px)' }}>
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>

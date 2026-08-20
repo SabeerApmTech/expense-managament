@@ -38,6 +38,7 @@ export const FormTextField = ({
             fullWidth
             size="small"
             hiddenLabel
+            onWheel={type === 'number' ? (e) => (e.target as HTMLElement).blur() : undefined}
             value={type === 'number' ? (field.value === 0 || field.value == null ? '' : field.value) : (field.value ?? '')}
             onChange={(e) => {
               if (type === 'number') {

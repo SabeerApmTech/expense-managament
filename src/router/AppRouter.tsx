@@ -8,6 +8,7 @@ import { UserManagementPage } from '../features/userManagement/pages/UserManagem
 import { EmployeeExpenseUsagePage } from '../features/userManagement/pages/EmployeeExpenseUsagePage';
 import { AccountsListPage } from '../features/accounts/pages/AccountsListPage';
 import { SettlementReportPage } from '../features/accounts/pages/SettlementReportPage';
+import { MySettlementsPage } from '../features/accounts/pages/MySettlementsPage';
 import { useAuthContext } from '../store/authStore';
 import { getHomeRoute } from '../utils/routing';
 import { ROUTES } from '../constants/masterData';
@@ -28,6 +29,7 @@ export const AppRouter = () => {
         <Route element={<MainLayout />}>
           <Route element={<ProtectedRoute allow={canAccessExpenses} />}>
             <Route path={ROUTES.EXPENSES} element={<ExpenseListPage />} />
+            <Route path={ROUTES.MY_SETTLEMENTS} element={<MySettlementsPage />} />
           </Route>
           <Route element={<ProtectedRoute allow={canAccessApprovals} />}>
             <Route path={ROUTES.APPROVALS} element={<ApprovalsListPage />} />

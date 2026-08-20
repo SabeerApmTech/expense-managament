@@ -39,4 +39,5 @@ export const ROUTES = {
   USER_MANAGEMENT: '/user-management',
   EMPLOYEE_EXPENSE_USAGE: '/employee-expense-usage',
   SETTLEMENT_REPORT: '/settlement-report',
+  MY_SETTLEMENTS: '/my-settlements',
 } as const;
