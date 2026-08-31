@@ -24,11 +24,13 @@ import { useAuthContext } from '../../../store/authStore';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import type { ExpenseDetailFormValues } from '../schemas/expense.schema';
 import type { ExpenseDetailItem, ExpenseSummary } from '../../../types/expense.types';
+import type { ExpenseCategory } from '../../../types/expenseType.types';
 
 export type DrawerMode = 'add' | 'view' | null;
 
 interface Props {
   mode: DrawerMode;
+  category: ExpenseCategory;
   expense: ExpenseSummary | null;
   initialTab?: number;
   onClose: () => void;
@@ -189,11 +191,12 @@ function ApprovalTimeline({
 }
 
 function DetailCard({
-  detail, empId, expenseId, settlementBillPath, onViewBill,
+  detail, empId, expenseId, category, settlementBillPath, onViewBill,
 }: {
   detail: ExpenseDetailItem;
   empId: string;
   expenseId: number;
+  category: ExpenseCategory;
   settlementBillPath?: string;
   onViewBill: (url: string) => void;
 }) {
@@ -224,6 +227,7 @@ function DetailCard({
           />
         </Box>
         <ExpenseForm
+          category={category}
           defaultValues={{
             initiatedByEmpId: detail.initiatedByEmpId,
             expenseTypeId: String(detail.expenseTypeId),
@@ -305,13 +309,21 @@ function DetailCard({
   );
 }
 
-function AddItemToExpense({ empId, expenseId, onDone }: { empId: string; expenseId: number; onDone: () => void }) {
+function AddItemToExpense({
+  empId, expenseId, category, onDone,
+}: {
+  empId: string;
+  expenseId: number;
+  category: ExpenseCategory;
+  onDone: () => void;
+}) {
   const createMutation = useCreateExpenseDetail(empId, expenseId);
 
   return (
     <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>Add Item</Typography>
       <ExpenseForm
+        category={category}
         onSubmit={(values) => {
           createMutation.mutate(buildFormData(empId, expenseId, values), { onSuccess: onDone });
         }}
@@ -323,7 +335,14 @@ function AddItemToExpense({ empId, expenseId, onDone }: { empId: string; expense
   );
 }
 
-function ViewContent({ empId, expense, initialTab }: { empId: string; expense: ExpenseSummary; initialTab?: number }) {
+function ViewContent({
+  empId, expense, category, initialTab,
+}: {
+  empId: string;
+  expense: ExpenseSummary;
+  category: ExpenseCategory;
+  initialTab?: number;
+}) {
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
   const [tab, setTab] = useState(
@@ -363,7 +382,7 @@ function ViewContent({ empId, expense, initialTab }: { empId: string; expense: E
       </Tabs>
       <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
         {addingItem ? (
-          <AddItemToExpense empId={empId} expenseId={expense.expenseId} onDone={() => setAddingItem(false)} />
+          <AddItemToExpense empId={empId} expenseId={expense.expenseId} category={category} onDone={() => setAddingItem(false)} />
         ) : canAddItem ? (
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <IconButton
@@ -388,6 +407,7 @@ function ViewContent({ empId, expense, initialTab }: { empId: string; expense: E
               detail={detail}
               empId={empId}
               expenseId={expense.expenseId}
+              category={category}
               settlementBillPath={settlementBillByDetailId.get(detail.expenseDetailId)}
               onViewBill={setViewerUrl}
             />
@@ -399,7 +419,13 @@ function ViewContent({ empId, expense, initialTab }: { empId: string; expense: E
   );
 }
 
-function AddContent({ empId, onClose }: { empId: string; onClose: () => void }) {
+function AddContent({
+  empId, category, onClose,
+}: {
+  empId: string;
+  category: ExpenseCategory;
+  onClose: () => void;
+}) {
   const [expenseId, setExpenseId] = useState<number | undefined>(undefined);
   const [formKey, setFormKey] = useState(0);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
@@ -436,6 +462,7 @@ function AddContent({ empId, onClose }: { empId: string; onClose: () => void }) 
               detail={detail}
               empId={empId}
               expenseId={expenseId as number}
+              category={category}
               onViewBill={setViewerUrl}
             />
           ))}
@@ -443,6 +470,7 @@ function AddContent({ empId, onClose }: { empId: string; onClose: () => void }) 
       )}
       <ExpenseForm
         key={formKey}
+        category={category}
         onSubmit={handleSubmit}
         isSubmitting={createMutation.isPending}
         submitLabel={details.length > 0 ? 'Add Another Item' : 'Submit'}
@@ -460,7 +488,7 @@ function AddContent({ empId, onClose }: { empId: string; onClose: () => void }) 
 
 const TITLE: Record<string, string> = { add: 'Add Expense', view: 'Expense Details' };
 
-export const ExpenseDrawer = ({ mode, expense, initialTab, onClose }: Props) => {
+export const ExpenseDrawer = ({ mode, category, expense, initialTab, onClose }: Props) => {
   const { user } = useAuthContext();
   const empId = user?.empId ?? '';
 
@@ -485,11 +513,11 @@ export const ExpenseDrawer = ({ mode, expense, initialTab, onClose }: Props) => 
       <Divider sx={{ flexShrink: 0 }} />
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {mode === 'view' && expense && (
-          <ViewContent key={expense.expenseId} empId={empId} expense={expense} initialTab={initialTab} />
+          <ViewContent key={expense.expenseId} empId={empId} expense={expense} category={category} initialTab={initialTab} />
         )}
         {mode === 'add' && (
           <Box sx={{ flex: 1, overflowY: 'auto' }}>
-            <AddContent empId={empId} onClose={onClose} />
+            <AddContent empId={empId} category={category} onClose={onClose} />
           </Box>
         )}
       </Box>

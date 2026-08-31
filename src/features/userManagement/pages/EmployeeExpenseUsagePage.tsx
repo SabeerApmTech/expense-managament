@@ -1,202 +1,156 @@
 import {
-  Box, Paper, Typography, FormControl, Select, MenuItem, TextField, InputAdornment, Chip,
-  Table, TableBody, TableCell, TableHead, TableRow, Collapse, IconButton,
+  Box, Paper, Typography, FormControl, Select, MenuItem, TextField, InputAdornment,
+  IconButton, Collapse, Grid, Chip,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import GridOnIcon from '@mui/icons-material/GridOn';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { useMemo, useState } from 'react';
 import { LoadingState } from '../../../components/common/LoadingState';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
-import { useAllEmpExpenseTypeUsage } from '../hooks/useUserManagement';
+import { ExpenseTypeYearCard } from '../../accounts/components/ExpenseTypeYearCard';
+import { useYearlyUsage } from '../../accounts/hooks/useAccounts';
 import { useAuthContext } from '../../../store/authStore';
 import { formatCurrency } from '../../../utils/formatters';
-import { exportGroupedPDF, exportGroupedExcel } from '../../../utils/tableExport';
-import type { EmployeeExpenseTypeUsage } from '../../../types/user.types';
+import type { YearlyUsageEmployee } from '../../../types/accounts.types';
 
-function EmployeeGroupRow({ empName, items }: { empName: string; items: EmployeeExpenseTypeUsage[] }) {
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
+
+function EmployeeYearRow({ employee }: { employee: YearlyUsageEmployee }) {
   const [open, setOpen] = useState(false);
   return (
-    <>
-      <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => setOpen((o) => !o)}>
-        <TableCell sx={{ width: 40 }}>
-          <IconButton size="small">
-            {open ? <KeyboardArrowDownIcon fontSize="small" /> : <KeyboardArrowRightIcon fontSize="small" />}
-          </IconButton>
-        </TableCell>
-        <TableCell colSpan={5} sx={{ fontWeight: 700 }}>{empName}</TableCell>
-      </TableRow>
-      <TableRow>
-        <TableCell sx={{ p: 0, ...(open ? {} : { border: 0 }) }} colSpan={6}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ py: 1.5, px: 2, bgcolor: 'action.hover' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, border: 0 }}>Expense Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600, border: 0 }}>Category</TableCell>
-                    <TableCell sx={{ fontWeight: 600, border: 0 }}>Limit</TableCell>
-                    <TableCell sx={{ fontWeight: 600, border: 0 }}>Spent</TableCell>
-                    <TableCell sx={{ fontWeight: 600, border: 0 }}>Remaining</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {items.map((item) => {
-                    const spent = item.settledAmount + item.pendingAmount;
-                    return (
-                      <TableRow key={item.userExpenseTypeId}>
-                        <TableCell sx={{ border: 0 }}>{item.expenseTypeName}</TableCell>
-                        <TableCell sx={{ border: 0 }}><Chip size="small" label={item.expenseCategory} variant="outlined" /></TableCell>
-                        <TableCell sx={{ border: 0 }}>{formatCurrency(item.limitAmount)}</TableCell>
-                        <TableCell sx={{ border: 0 }}>{formatCurrency(spent)}</TableCell>
-                        <TableCell sx={{ border: 0 }}>
-                          <Chip
-                            size="small"
-                            label={formatCurrency(item.remainingAmount)}
-                            color={item.remainingAmount <= 0 ? 'error' : 'success'}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
-    </>
+    <Paper variant="outlined" sx={{ borderRadius: 2, mb: 1.5, overflow: 'hidden' }}>
+      <Box
+        onClick={() => setOpen((o) => !o)}
+        sx={{
+          display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.5, cursor: 'pointer',
+          '&:hover': { bgcolor: 'action.hover' },
+        }}
+      >
+        <IconButton size="small" sx={{ pointerEvents: 'none' }}>
+          {open ? <KeyboardArrowDownIcon fontSize="small" /> : <KeyboardArrowRightIcon fontSize="small" />}
+        </IconButton>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, flex: 1 }}>{employee.empName}</Typography>
+        <Chip
+          size="small"
+          label={formatCurrency(employee.totalYearlyAmount)}
+          color="primary"
+          variant="outlined"
+          sx={{ fontWeight: 700 }}
+        />
+      </Box>
+      <Collapse in={open} timeout="auto" unmountOnExit>
+        <Box sx={{ px: 2, pb: 2, pt: 0.5, bgcolor: 'action.hover' }}>
+          {employee.expenseTypes.length === 0 ? (
+            <Typography variant="caption" color="text.secondary">No expense usage this year</Typography>
+          ) : (
+            <Grid container spacing={1.5}>
+              {employee.expenseTypes.map((t) => (
+                <Grid key={t.expenseTypeId} size={{ xs: 12, sm: 6, lg: 4 }}>
+                  <ExpenseTypeYearCard expenseType={t} />
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
+      </Collapse>
+    </Paper>
   );
 }
 
 export const EmployeeExpenseUsagePage = () => {
   const { user: currentUser } = useAuthContext();
-  const { data = [], isLoading, isError, refetch } = useAllEmpExpenseTypeUsage(currentUser?.empId ?? null);
+  const [year, setYear] = useState(CURRENT_YEAR);
   const [selectedEmpId, setSelectedEmpId] = useState('');
   const [search, setSearch] = useState('');
 
-  const employees = useMemo(() => {
-    const seen = new Map<string, string>();
-    data.forEach((d) => { if (!seen.has(d.empId)) seen.set(d.empId, d.empName); });
-    return Array.from(seen, ([empId, empName]) => ({ empId, empName }));
-  }, [data]);
+  const { data, isLoading, isError, refetch } = useYearlyUsage(currentUser?.empId, year);
+  const employees = useMemo(() => data?.employees ?? [], [data]);
 
-  const filtered = useMemo(() => {
-    let rows = selectedEmpId ? data.filter((d) => d.empId === selectedEmpId) : data;
-    if (search) {
-      const q = search.toLowerCase();
-      rows = rows.filter((r) => r.empName.toLowerCase().includes(q) || r.expenseTypeName.toLowerCase().includes(q));
-    }
-    return rows;
-  }, [data, selectedEmpId, search]);
-
-  // Group by employee, preserving first-seen order.
-  const groups = useMemo(() => {
-    const order: string[] = [];
-    const map = new Map<string, EmployeeExpenseTypeUsage[]>();
-    filtered.forEach((r) => {
-      const list = map.get(r.empId);
-      if (list) list.push(r);
-      else { map.set(r.empId, [r]); order.push(r.empId); }
-    });
-    return order.map((empId) => [empId, map.get(empId) as EmployeeExpenseTypeUsage[]] as const);
-  }, [filtered]);
-
-  const exportSections = useMemo(
-    () =>
-      groups.map(([, items]) => ({
-        heading: items[0].empName,
-        columns: ['Expense Type', 'Category', 'Limit', 'Spent', 'Remaining'],
-        rows: items.map((item) => [
-          item.expenseTypeName,
-          item.expenseCategory,
-          formatCurrency(item.limitAmount),
-          formatCurrency(item.settledAmount + item.pendingAmount),
-          formatCurrency(item.remainingAmount),
-        ]),
-      })),
-    [groups]
+  const employeeOptions = useMemo(
+    () => employees.map((e) => ({ empId: e.empId, empName: e.empName })),
+    [employees]
   );
 
-  return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Paper variant="outlined" sx={{ borderRadius: 2, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, px: 2.5, py: 2, flexShrink: 0 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Employee Expense Usage — This Month</Typography>
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-            <TextField
-              size="small"
-              placeholder="Search employees..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              sx={{ minWidth: 240 }}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <Select value={selectedEmpId} onChange={(e) => setSelectedEmpId(e.target.value)} displayEmpty>
-                <MenuItem value=""><em>All Employees</em></MenuItem>
-                {employees.map((e) => (
-                  <MenuItem key={e.empId} value={e.empId}>{e.empName}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <IconButton
-              size="small"
-              title="Export PDF"
-              disabled={exportSections.length === 0}
-              onClick={() => exportGroupedPDF('Employee Expense Usage', exportSections)}
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
-            >
-              <PictureAsPdfIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              title="Export Excel"
-              disabled={exportSections.length === 0}
-              onClick={() => exportGroupedExcel('Employee Expense Usage', exportSections)}
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
-            >
-              <GridOnIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        </Box>
+  const filtered = useMemo(() => {
+    let rows = selectedEmpId ? employees.filter((e) => e.empId === selectedEmpId) : employees;
+    if (search) {
+      const q = search.toLowerCase();
+      rows = rows.filter((e) => e.empName.toLowerCase().includes(q));
+    }
+    return rows;
+  }, [employees, selectedEmpId, search]);
 
-        {isLoading ? (
-          <LoadingState />
-        ) : isError ? (
-          <ErrorState onRetry={refetch} />
-        ) : groups.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <Box sx={{ flex: 1, overflow: 'auto' }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ width: 40 }} />
-                  <TableCell colSpan={5} sx={{ fontWeight: 600 }}>Employee</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {groups.map(([empId, items]) => (
-                  <EmployeeGroupRow key={empId} empName={items[0].empName} items={items} />
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
-        )}
-      </Paper>
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TrendingUpIcon color="primary" />
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>Employee Expense Usage — {year}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
+            placeholder="Search employees..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ minWidth: 220 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <Select value={selectedEmpId} onChange={(e) => setSelectedEmpId(e.target.value)} displayEmpty>
+              <MenuItem value=""><em>All Employees</em></MenuItem>
+              {employeeOptions.map((e) => (
+                <MenuItem key={e.empId} value={e.empId}>{e.empName}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 100 }}>
+            <Select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+              {YEAR_OPTIONS.map((y) => (
+                <MenuItem key={y} value={y}>{y}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Box>
+
+      {isLoading ? (
+        <LoadingState />
+      ) : isError ? (
+        <ErrorState onRetry={refetch} />
+      ) : (
+        <>
+          <Paper
+            variant="outlined"
+            sx={{
+              px: 3, py: 2.5, mb: 2.5, borderRadius: 2.5,
+              background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              color: 'primary.contrastText',
+            }}
+          >
+            <Typography variant="body2" sx={{ opacity: 0.85, mb: 0.5 }}>Total Settled — {year}</Typography>
+            <Typography variant="h4" sx={{ fontWeight: 800 }}>{formatCurrency(data?.totalYearlyAmount ?? 0)}</Typography>
+          </Paper>
+
+          {filtered.length === 0 ? (
+            <EmptyState />
+          ) : (
+            filtered.map((e) => <EmployeeYearRow key={e.empId} employee={e} />)
+          )}
+        </>
+      )}
     </Box>
   );
 };

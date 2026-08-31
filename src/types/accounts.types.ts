@@ -94,3 +94,54 @@ export interface SettleExpenseResult {
   settledExpenseItems: SettledExpenseItem[];
   settlementBill: SettlementBill;
 }
+
+export interface YearlyUsageMonth {
+  monthNumber: number;
+  monthName: string;
+  amount: number;
+}
+
+export interface YearlyUsageExpenseType {
+  expenseTypeId: number;
+  expenseTypeName: string;
+  totalYearlyAmount: number;
+  monthlyUsage: YearlyUsageMonth[];
+}
+
+export interface YearlyUsageEmployee {
+  empId: string;
+  empName: string;
+  totalYearlyAmount: number;
+  expenseTypes: YearlyUsageExpenseType[];
+}
+
+// scope is 'OWN_EXPENSES' when a regular user calls this (employees has just
+// themself) or an admin-wide scope when an ADMIN/SUPERADMIN calls it (employees
+// covers everyone) — the same endpoint, backend decides based on the caller's role.
+export interface YearlyUsageReport {
+  year: number;
+  scope: string;
+  totalYearlyAmount: number;
+  employees: YearlyUsageEmployee[];
+}
+
+export interface OfficeExpenseSettlementItem {
+  settlementAmount: number;
+  settledOn: string;
+}
+
+export interface OfficeExpenseSettlementType {
+  expenseTypeId: number;
+  expenseTypeName: string;
+  totalSettledAmount: number;
+  settlement: OfficeExpenseSettlementItem[];
+}
+
+export interface OfficeExpenseSettlement {
+  officeId: number;
+  officeName: string;
+  city: string;
+  state: string;
+  country: string;
+  expenseTypes: OfficeExpenseSettlementType[];
+}

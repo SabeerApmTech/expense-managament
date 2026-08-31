@@ -11,3 +11,8 @@ export const canAccessAccounts = (user: AuthUser | null): boolean =>
 
 export const canAccessUserManagement = (user: AuthUser | null): boolean =>
   !!user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN');
+
+// Asset creators see their own office's assets; ADMIN/SUPERADMIN see every office's
+// (read-only) — same nav entry, the page itself branches on role.
+export const canAccessAssets = (user: AuthUser | null): boolean =>
+  !!user && (user.isAssetCreator || user.role === 'ADMIN' || user.role === 'SUPERADMIN');

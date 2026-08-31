@@ -33,11 +33,17 @@ export const isTravelExpenseType = (expenseTypeName: string | null | undefined):
 
 export const ROUTES = {
   LOGIN: '/login',
+  USAGES: '/usages',
   EXPENSES: '/expenses',
+  OFFICE_EXPENSES: '/office-expenses',
   APPROVALS: '/approvals',
   ACCOUNTS: '/accounts',
   USER_MANAGEMENT: '/user-management',
   EMPLOYEE_EXPENSE_USAGE: '/employee-expense-usage',
   SETTLEMENT_REPORT: '/settlement-report',
+  OFFICE_REPORTS: '/office-reports',
   MY_SETTLEMENTS: '/my-settlements',
+  ASSETS: '/assets',
+  OFFICE_MANAGEMENT: '/office-management',
+  TERMS: '/terms',
 } as const;

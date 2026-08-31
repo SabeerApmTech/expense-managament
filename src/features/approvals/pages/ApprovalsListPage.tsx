@@ -92,7 +92,7 @@ export const ApprovalsListPage = () => {
         <Tab label={`Rejected (${totals.rejected})`} />
       </Tabs>
 
-      <Paper variant="outlined" sx={{ borderRadius: 2, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <Paper variant="outlined" sx={{ borderRadius: 2, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 420 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, px: 2.5, py: 2, flexShrink: 0 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{TAB_TITLES[tab]}</Typography>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -134,11 +134,17 @@ export const ApprovalsListPage = () => {
         </Box>
 
         {isLoading ? (
-          <LoadingState />
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <LoadingState />
+          </Box>
         ) : isError ? (
-          <ErrorState onRetry={refetch} />
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ErrorState onRetry={refetch} />
+          </Box>
         ) : groups.length === 0 ? (
-          <EmptyState />
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <EmptyState />
+          </Box>
         ) : (
           <Box sx={{ flex: 1, overflow: 'auto' }}>
             <Table stickyHeader>

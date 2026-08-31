@@ -6,12 +6,17 @@ export interface UserAccount {
   empId: string;
   empName: string;
   dateOfBirth: string;
+  officeId: number;
+  department: string;
+  email: string;
+  bloodGroup: string;
   role: Role;
   countryCode: string;
   phoneNumber: string;
   isActive: boolean;
   isInitiator: boolean;
   isAccountant: boolean;
+  isAssetCreator: boolean;
   createdByEmpId: string;
   createdByEmpName: string;
   createdAt: string;
@@ -22,6 +27,7 @@ export interface CreateUserPayload {
   empId: string;
   empName: string;
   dateOfBirth: string;
+  officeId: number;
   role: Role;
   countryCode: string;
   phoneNumber: string;
@@ -35,12 +41,17 @@ export interface EditUserPayload {
   empId: string;
   empName: string;
   dateOfBirth: string;
+  officeId: number;
+  department: string;
+  email: string;
+  bloodGroup: string;
   role: Role;
   countryCode: string;
   phoneNumber: string;
   isActive: boolean;
   isInitiator: boolean;
   isAccountant: boolean;
+  isAssetCreator: boolean;
   updatedByEmpId: string;
 }
 

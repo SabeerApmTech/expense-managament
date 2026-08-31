@@ -3,7 +3,8 @@ import { unwrap } from '../utils/apiEnvelope';
 import type { ApiResponse } from '../types/auth.types';
 import type {
   PendingSettlement, SettleExpenseResult, SettlementBill, SettledExpensesReport, SettledExpenseRecord,
-  SettlementReport,
+  SettlementReport, YearlyUsageReport, YearlyUsageEmployee, YearlyUsageExpenseType,
+  OfficeExpenseSettlement, OfficeExpenseSettlementType,
 } from '../types/accounts.types';
 
 export const SETTLEMENT_BILL_BASE_URL = 'https://expense.apmiot.com';
@@ -41,6 +42,45 @@ function flattenSettledGroup(entry: unknown): SettledExpenseRecord[] {
 
 function normalizePendingSettlement(entry: PendingSettlement): PendingSettlement {
   return { ...entry, details: Array.isArray(entry?.details) ? entry.details : [] };
+}
+
+function normalizeYearlyExpenseType(entry: unknown): YearlyUsageExpenseType {
+  const t = entry as Partial<YearlyUsageExpenseType>;
+  return {
+    expenseTypeId: t.expenseTypeId ?? 0,
+    expenseTypeName: t.expenseTypeName ?? '',
+    totalYearlyAmount: t.totalYearlyAmount ?? 0,
+    monthlyUsage: Array.isArray(t.monthlyUsage) ? t.monthlyUsage : [],
+  };
+}
+
+function normalizeYearlyEmployee(entry: unknown): YearlyUsageEmployee {
+  const e = entry as Partial<YearlyUsageEmployee>;
+  return {
+    empId: e.empId ?? '',
+    empName: e.empName ?? '',
+    totalYearlyAmount: e.totalYearlyAmount ?? 0,
+    expenseTypes: Array.isArray(e.expenseTypes) ? e.expenseTypes.map(normalizeYearlyExpenseType) : [],
+  };
+}
+
+function normalizeOfficeExpenseSettlement(entry: unknown): OfficeExpenseSettlement {
+  const o = entry as Partial<OfficeExpenseSettlement>;
+  return {
+    officeId: o.officeId ?? 0,
+    officeName: o.officeName ?? '',
+    city: o.city ?? '',
+    state: o.state ?? '',
+    country: o.country ?? '',
+    expenseTypes: Array.isArray(o.expenseTypes)
+      ? (o.expenseTypes as OfficeExpenseSettlementType[]).map((t) => ({
+          expenseTypeId: t.expenseTypeId ?? 0,
+          expenseTypeName: t.expenseTypeName ?? '',
+          totalSettledAmount: t.totalSettledAmount ?? 0,
+          settlement: Array.isArray(t.settlement) ? t.settlement : [],
+        }))
+      : [],
+  };
 }
 
 export const accountsApi = {
@@ -117,5 +157,30 @@ export const accountsApi = {
       employeeTotals: Array.isArray(report?.employeeTotals) ? report.employeeTotals : [],
       expenseTypeTotals: Array.isArray(report?.expenseTypeTotals) ? report.expenseTypeTotals : [],
     };
+  },
+
+  // Same endpoint for both a regular user's own yearly usage and an ADMIN/SUPERADMIN's
+  // all-employee view — scope in the response indicates which the backend returned.
+  getYearlyUsage: async (empId: string, year: number): Promise<YearlyUsageReport> => {
+    const response = await apiClient.get<ApiResponse<YearlyUsageReport>>(
+      '/api/accounts/settlement-report/yearly-usage',
+      { params: { EmpId: empId, Year: year } }
+    );
+    const report = response.data.data;
+    return {
+      year: report?.year ?? year,
+      scope: report?.scope ?? '',
+      totalYearlyAmount: report?.totalYearlyAmount ?? 0,
+      employees: Array.isArray(report?.employees) ? report.employees.map(normalizeYearlyEmployee) : [],
+    };
+  },
+
+  // ADMIN/SUPERADMIN — every office's settled expense totals, optionally narrowed by date range.
+  getOfficeExpenseSettlement: async (fromDate?: string, toDate?: string): Promise<OfficeExpenseSettlement[]> => {
+    const response = await apiClient.get<ApiResponse<OfficeExpenseSettlement[]>>(
+      '/api/accounts/office-expense-settlement',
+      { params: { ...(fromDate ? { FromDate: fromDate } : {}), ...(toDate ? { ToDate: toDate } : {}) } }
+    );
+    return Array.isArray(response.data.data) ? response.data.data.map(normalizeOfficeExpenseSettlement) : [];
   },
 };

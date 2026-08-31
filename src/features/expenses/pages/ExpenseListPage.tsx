@@ -15,17 +15,24 @@ import { ExpenseDrawer } from '../components/ExpenseDrawer';
 import { ExpenseUsageSummary } from '../components/ExpenseUsageSummary';
 import type { DrawerMode } from '../components/ExpenseDrawer';
 import { useExpenseList } from '../hooks/useExpenses';
+import { useExpenseTypes } from '../../expenseTypes/hooks/useExpenseTypes';
 import { useAuthContext } from '../../../store/authStore';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import { exportGroupedPDF, exportGroupedExcel } from '../../../utils/tableExport';
 import type { ExpenseDetailItem } from '../../../types/expense.types';
+import type { ExpenseCategory } from '../../../types/expenseType.types';
 
 type FlatRow = ExpenseDetailItem & { submittedOn: string };
 
 const STATUS_KEYS = ['pending', 'approved', 'rejected'] as const;
 const TAB_TITLES = ['Pending', 'Approved', 'Rejected'];
 
-export const ExpenseListPage = () => {
+interface Props {
+  category: ExpenseCategory;
+  title: string;
+}
+
+export const ExpenseListPage = ({ category, title }: Props) => {
   const { user } = useAuthContext();
   const empId = user?.empId ?? '';
   const [mode, setMode] = useState<DrawerMode>(null);
@@ -34,23 +41,47 @@ export const ExpenseListPage = () => {
   const [search, setSearch] = useState('');
 
   const { data = [], isLoading, isError, refetch } = useExpenseList(empId);
+  const { data: expenseTypes = [] } = useExpenseTypes();
+
+  // expenseTypeId -> category, so items belonging to the other category (My Expenses
+  // vs Office Expenses) never show up on this page, even though both live under the
+  // same underlying expense.
+  const categoryByTypeId = useMemo(
+    () => new Map(expenseTypes.map((t) => [t.expenseTypeId, t.expenseCategory])),
+    [expenseTypes]
+  );
+  const belongsHere = (d: ExpenseDetailItem) => categoryByTypeId.get(d.expenseTypeId) === category;
 
   // Derived fresh from the live query data on every render (rather than a snapshot
   // captured at click time), so editing/deleting an item — which refetches this
   // list — is reflected in the open drawer immediately instead of only after a reload.
-  const selectedExpense = data.find((e) => e.expenseId === selectedExpenseId) ?? null;
+  // The raw expense's pending/approved/rejected arrays span both categories (an
+  // "expense" just groups items submitted together) — filtered down here too, so the
+  // drawer opened from this page only ever shows this page's category.
+  const rawSelectedExpense = data.find((e) => e.expenseId === selectedExpenseId) ?? null;
+  const selectedExpense = rawSelectedExpense && {
+    ...rawSelectedExpense,
+    pending: rawSelectedExpense.pending.filter(belongsHere),
+    approved: rawSelectedExpense.approved.filter(belongsHere),
+    rejected: rawSelectedExpense.rejected.filter(belongsHere),
+    pendingCount: rawSelectedExpense.pending.filter(belongsHere).length,
+    approvedCount: rawSelectedExpense.approved.filter(belongsHere).length,
+    rejectedCount: rawSelectedExpense.rejected.filter(belongsHere).length,
+  };
 
   const totals = data.reduce(
     (acc, e) => ({
-      pending: acc.pending + e.pendingCount,
-      approved: acc.approved + e.approvedCount,
-      rejected: acc.rejected + e.rejectedCount,
+      pending: acc.pending + e.pending.filter(belongsHere).length,
+      approved: acc.approved + e.approved.filter(belongsHere).length,
+      rejected: acc.rejected + e.rejected.filter(belongsHere).length,
     }),
     { pending: 0, approved: 0, rejected: 0 }
   );
 
   const statusKey = STATUS_KEYS[tab];
-  const rows: FlatRow[] = data.flatMap((e) => e[statusKey].map((d) => ({ ...d, submittedOn: e.submittedOn })));
+  const rows: FlatRow[] = data.flatMap((e) =>
+    e[statusKey].filter(belongsHere).map((d) => ({ ...d, submittedOn: e.submittedOn }))
+  );
 
   const filtered = useMemo(() => {
     if (!search) return rows;
@@ -91,7 +122,7 @@ export const ExpenseListPage = () => {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {empId && <ExpenseUsageSummary empId={empId} />}
+      {empId && <ExpenseUsageSummary empId={empId} category={category} />}
 
       <Tabs value={tab} onChange={(_e, v) => { setTab(v); setSearch(''); }} sx={{ mb: 2.5, flexShrink: 0 }}>
         <Tab label={`Pending (${totals.pending})`} />
@@ -99,9 +130,9 @@ export const ExpenseListPage = () => {
         <Tab label={`Rejected (${totals.rejected})`} />
       </Tabs>
 
-      <Paper variant="outlined" sx={{ borderRadius: 2, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <Paper variant="outlined" sx={{ borderRadius: 2, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 420 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, px: 2.5, py: 2, flexShrink: 0 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{TAB_TITLES[tab]} Expenses</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{TAB_TITLES[tab]} {title}</Typography>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             <TextField
               size="small"
@@ -126,7 +157,7 @@ export const ExpenseListPage = () => {
               size="small"
               title="Export PDF"
               disabled={exportSections.length === 0}
-              onClick={() => exportGroupedPDF(`${TAB_TITLES[tab]} Expenses`, exportSections)}
+              onClick={() => exportGroupedPDF(`${TAB_TITLES[tab]} ${title}`, exportSections)}
               sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
             >
               <PictureAsPdfIcon fontSize="small" />
@@ -135,7 +166,7 @@ export const ExpenseListPage = () => {
               size="small"
               title="Export Excel"
               disabled={exportSections.length === 0}
-              onClick={() => exportGroupedExcel(`${TAB_TITLES[tab]} Expenses`, exportSections)}
+              onClick={() => exportGroupedExcel(`${TAB_TITLES[tab]} ${title}`, exportSections)}
               sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.75 }}
             >
               <GridOnIcon fontSize="small" />
@@ -144,11 +175,17 @@ export const ExpenseListPage = () => {
         </Box>
 
         {isLoading ? (
-          <LoadingState />
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <LoadingState />
+          </Box>
         ) : isError ? (
-          <ErrorState onRetry={refetch} />
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ErrorState onRetry={refetch} />
+          </Box>
         ) : groups.length === 0 ? (
-          <EmptyState />
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <EmptyState />
+          </Box>
         ) : (
           <Box sx={{ flex: 1, overflow: 'auto' }}>
             <Table stickyHeader>
@@ -191,7 +228,7 @@ export const ExpenseListPage = () => {
         )}
       </Paper>
 
-      <ExpenseDrawer mode={mode} expense={selectedExpense} initialTab={tab} onClose={closeDrawer} />
+      <ExpenseDrawer mode={mode} category={category} expense={selectedExpense} initialTab={tab} onClose={closeDrawer} />
     </Box>
   );
 };

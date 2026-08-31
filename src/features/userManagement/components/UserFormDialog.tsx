@@ -7,8 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import { FormTextField } from '../../../components/forms/FormTextField';
 import { FormDatePicker } from '../../../components/forms/FormDatePicker';
+import { FormSelect } from '../../../components/forms/FormSelect';
 import { userSchema, type UserFormValues } from '../schemas/user.schema';
 import { useCreateUser, useEditUser, useUsers } from '../hooks/useUserManagement';
+import { useOffices } from '../../offices/hooks/useOffices';
 import { useAuthContext } from '../../../store/authStore';
 import type { UserAccount } from '../../../types/user.types';
 
@@ -19,8 +21,8 @@ interface Props {
 }
 
 const DEFAULT_VALUES: UserFormValues = {
-  empId: '', empName: '', dateOfBirth: '', role: 'USER',
-  countryCode: '+91', phoneNumber: '', isActive: true, isInitiator: false, isAccountant: false,
+  empId: '', empName: '', dateOfBirth: '', officeId: '', role: 'USER',
+  countryCode: '+91', phoneNumber: '', isActive: true, isInitiator: false, isAccountant: false, isAssetCreator: false,
 };
 
 // Employee IDs follow "APM-000N" — suggest the next one in sequence for new users.
@@ -35,6 +37,7 @@ function nextEmpId(users: UserAccount[]): string {
 export const UserFormDialog = ({ open, onClose, editUser }: Props) => {
   const { user: currentUser } = useAuthContext();
   const { data: users = [] } = useUsers();
+  const { data: offices = [] } = useOffices();
   const isEdit = !!editUser;
   const { mutate: create, isPending: creating } = useCreateUser();
   const { mutate: edit, isPending: editing } = useEditUser();
@@ -52,12 +55,14 @@ export const UserFormDialog = ({ open, onClose, editUser }: Props) => {
         empId: editUser.empId,
         empName: editUser.empName,
         dateOfBirth: editUser.dateOfBirth?.slice(0, 10) ?? '',
+        officeId: editUser.officeId ? String(editUser.officeId) : '',
         role: editUser.role,
         countryCode: editUser.countryCode,
         phoneNumber: editUser.phoneNumber,
         isActive: editUser.isActive,
         isInitiator: editUser.isInitiator,
         isAccountant: editUser.isAccountant,
+        isAssetCreator: editUser.isAssetCreator,
       });
     } else {
       methods.reset({ ...DEFAULT_VALUES, empId: nextEmpId(users) });
@@ -76,12 +81,17 @@ export const UserFormDialog = ({ open, onClose, editUser }: Props) => {
             empId: values.empId,
             empName: values.empName,
             dateOfBirth: values.dateOfBirth,
+            officeId: Number(values.officeId),
+            department: editUser.department,
+            email: editUser.email,
+            bloodGroup: editUser.bloodGroup,
             role: 'USER',
             countryCode: values.countryCode,
             phoneNumber: values.phoneNumber,
             isActive: values.isActive,
             isInitiator: values.isInitiator,
             isAccountant: values.isAccountant,
+            isAssetCreator: values.isAssetCreator,
             updatedByEmpId: currentUser.empId,
           },
         },
@@ -93,6 +103,7 @@ export const UserFormDialog = ({ open, onClose, editUser }: Props) => {
           empId: values.empId,
           empName: values.empName,
           dateOfBirth: values.dateOfBirth,
+          officeId: Number(values.officeId),
           role: 'USER',
           countryCode: values.countryCode,
           phoneNumber: values.phoneNumber,
@@ -121,6 +132,14 @@ export const UserFormDialog = ({ open, onClose, editUser }: Props) => {
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormSelect
+                name="officeId"
+                label="Office"
+                options={offices.map((o) => ({ value: String(o.officeId), label: `${o.officeName} — ${o.city}` }))}
+                required
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 3 }}>
               <FormTextField name="countryCode" label="Country Code" required />
@@ -156,6 +175,16 @@ export const UserFormDialog = ({ open, onClose, editUser }: Props) => {
                   <FormControlLabel
                     control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />}
                     label="Accountant"
+                  />
+                )}
+              />
+              <Controller
+                name="isAssetCreator"
+                control={methods.control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />}
+                    label="Asset Creator (can manage office assets)"
                   />
                 )}
               />

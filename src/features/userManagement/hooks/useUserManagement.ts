@@ -11,13 +11,11 @@ import type {
 
 export const USER_KEYS = {
   all: ['users'] as const,
-  allUsage: (adminEmpId: string) => ['all-expense-type-usage', adminEmpId] as const,
 };
 
 // Shared prefix with src/features/expenses/hooks/useExpenseTypeUsage.ts — kept as a
 // literal (not a cross-feature import) so limit CRUD here can invalidate that cache too.
 const EXPENSE_TYPE_USAGE_PREFIX = ['expense-type-usage'] as const;
-const ALL_EXPENSE_TYPE_USAGE_PREFIX = ['all-expense-type-usage'] as const;
 
 export const useUsers = () =>
   useQuery({
@@ -49,7 +47,7 @@ export const useDeleteUsers = () =>
 export const useCreateUserExpenseTypeLimit = () =>
   useManagedMutation(
     (payload: CreateUserExpenseTypeLimitPayload) => userManagementApi.createExpenseTypeLimit(payload),
-    [EXPENSE_TYPE_USAGE_PREFIX, ALL_EXPENSE_TYPE_USAGE_PREFIX],
+    [EXPENSE_TYPE_USAGE_PREFIX],
     { success: (result) => result.message ?? 'Expense limit added', error: 'Failed to add expense limit' }
   );
 
@@ -57,7 +55,7 @@ export const useUpdateUserExpenseTypeLimit = () =>
   useManagedMutation(
     (vars: { userExpenseTypeId: number; payload: UpdateUserExpenseTypeLimitPayload }) =>
       userManagementApi.updateExpenseTypeLimit(vars.userExpenseTypeId, vars.payload),
-    [EXPENSE_TYPE_USAGE_PREFIX, ALL_EXPENSE_TYPE_USAGE_PREFIX],
+    [EXPENSE_TYPE_USAGE_PREFIX],
     { success: (result) => result.message ?? 'Expense limit updated', error: 'Failed to update expense limit' }
   );
 
@@ -65,15 +63,6 @@ export const useDeleteUserExpenseTypeLimit = () =>
   useManagedMutation(
     (vars: { userExpenseTypeId: number; deletedByEmpId: string }) =>
       userManagementApi.deleteExpenseTypeLimit(vars.userExpenseTypeId, vars.deletedByEmpId),
-    [EXPENSE_TYPE_USAGE_PREFIX, ALL_EXPENSE_TYPE_USAGE_PREFIX],
+    [EXPENSE_TYPE_USAGE_PREFIX],
     { success: (result) => result.message ?? 'Expense limit deleted', error: 'Failed to delete expense limit' }
   );
-
-// Current-month usage across all employees, for ADMIN/SUPERADMIN. Path param is the
-// calling admin's own empId (an authorization check), same convention as useAllExpenseTypeLimits.
-export const useAllEmpExpenseTypeUsage = (adminEmpId: string | null) =>
-  useQuery({
-    queryKey: USER_KEYS.allUsage(adminEmpId ?? ''),
-    queryFn: () => userManagementApi.getAllEmpExpenseTypeUsage(adminEmpId as string),
-    enabled: !!adminEmpId,
-  });

@@ -12,9 +12,8 @@ import type {
 } from '../types/user.types';
 
 // The single-employee endpoint wraps usage rows as {empId, empName, fromDate, toDate,
-// expenseTypes: [...]}; the all-employees endpoint wraps them as {fromDate, toDate,
-// employees: [...]} where each row already carries its own empId/empName. Flatten
-// either shape (and the old flat-array shape, for safety) into one list of usage rows.
+// expenseTypes: [...]}. Also tolerates an {employees: [...]} wrapper and a bare flat
+// array, in case the response shape ever varies, flattening any of them into one list.
 function normalizeUsageEntry(entry: unknown): EmployeeExpenseTypeUsage[] {
   if (!entry || typeof entry !== 'object') return [];
   const envelope = entry as { empId?: string; empName?: string; expenseTypes?: unknown; employees?: unknown };
@@ -48,7 +47,15 @@ function normalizeUsage(raw: unknown): EmployeeExpenseTypeUsage[] {
 export const userManagementApi = {
   getAll: async (): Promise<UserAccount[]> => {
     const response = await apiClient.get<ApiResponse<UserAccount[]>>('/api/user-management/get-all');
-    return Array.isArray(response.data.data) ? response.data.data : [];
+    const data = Array.isArray(response.data.data) ? response.data.data : [];
+    return data.map((u) => ({
+      ...u,
+      officeId: u.officeId ?? 0,
+      department: u.department ?? '',
+      email: u.email ?? '',
+      bloodGroup: u.bloodGroup ?? '',
+      isAssetCreator: u.isAssetCreator ?? false,
+    }));
   },
 
   create: async (payload: CreateUserPayload): Promise<{ data: void; message?: string }> => {
@@ -95,14 +102,6 @@ export const userManagementApi = {
   getEmpExpenseTypeUsage: async (empId: string): Promise<EmployeeExpenseTypeUsage[]> => {
     const response = await apiClient.get<ApiResponse<unknown>>(
       `/api/user-management/expense-types/${empId}/emp-expense-types`
-    );
-    return normalizeUsage(response.data.data);
-  },
-
-  // Current-month usage across all employees — path empId is the calling ADMIN/SUPERADMIN's own empId.
-  getAllEmpExpenseTypeUsage: async (adminEmpId: string): Promise<EmployeeExpenseTypeUsage[]> => {
-    const response = await apiClient.get<ApiResponse<unknown>>(
-      `/api/user-management/expense-types/${adminEmpId}/all-emp-expense-types`
     );
     return normalizeUsage(response.data.data);
   },

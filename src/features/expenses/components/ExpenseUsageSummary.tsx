@@ -4,13 +4,16 @@ import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import HomeIcon from '@mui/icons-material/Home';
 import { useExpenseTypeUsage } from '../hooks/useExpenseTypeUsage';
 import { formatCurrency } from '../../../utils/formatters';
+import type { ExpenseCategory } from '../../../types/expenseType.types';
 
 interface Props {
   empId: string;
+  category: ExpenseCategory;
 }
 
-export const ExpenseUsageSummary = ({ empId }: Props) => {
-  const { data: usage = [] } = useExpenseTypeUsage(empId);
+export const ExpenseUsageSummary = ({ empId, category }: Props) => {
+  const { data: allUsage = [] } = useExpenseTypeUsage(empId);
+  const usage = allUsage.filter((t) => t.expenseCategory === category);
 
   if (usage.length === 0) return null;
 

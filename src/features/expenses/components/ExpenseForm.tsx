@@ -12,12 +12,14 @@ import { FormDatePicker } from '../../../components/forms/FormDatePicker';
 import { FormTextField } from '../../../components/forms/FormTextField';
 import { useInitiators } from '../hooks/useInitiators';
 import { useExpenseTypeUsage } from '../hooks/useExpenseTypeUsage';
-import { PAYMENT_MODE_OPTIONS, TRAVEL_MODE_OPTIONS, EXPENSE_CATEGORY_OPTIONS, isTravelExpenseType } from '../../../constants/masterData';
+import { PAYMENT_MODE_OPTIONS, TRAVEL_MODE_OPTIONS, isTravelExpenseType } from '../../../constants/masterData';
 import { expenseDetailSchema, type ExpenseDetailFormValues } from '../schemas/expense.schema';
 import { useAuthContext } from '../../../store/authStore';
 import { formatCurrency } from '../../../utils/formatters';
+import type { ExpenseCategory } from '../../../types/expenseType.types';
 
 interface Props {
+  category: ExpenseCategory;
   defaultValues?: Partial<ExpenseDetailFormValues>;
   existingBillUrls?: string[];
   onSubmit: (values: ExpenseDetailFormValues) => void;
@@ -95,35 +97,36 @@ function BillsFileUpload() {
 }
 
 interface FormFieldsProps {
+  category: ExpenseCategory;
   originalExpenseTypeId?: string;
   originalAmount?: number;
 }
 
-function FormFields({ originalExpenseTypeId, originalAmount = 0 }: FormFieldsProps) {
+function FormFields({ category, originalExpenseTypeId, originalAmount = 0 }: FormFieldsProps) {
   const { watch } = useFormContext<ExpenseDetailFormValues>();
   const { user } = useAuthContext();
   const { data: initiators = [], isLoading: loadingInitiators } = useInitiators();
-  const { data: usage = [], isLoading: loadingTypes } = useExpenseTypeUsage(user?.empId);
+  const { data: allUsage = [], isLoading: loadingTypes } = useExpenseTypeUsage(user?.empId);
+  const usage = allUsage.filter((t) => t.expenseCategory === category);
   const expenseTypeId = watch('expenseTypeId');
   const amount = watch('amount');
   const fromDate = watch('fromDate');
 
-  // Only expense types the employee has an assigned limit for are selectable; one
-  // whose monthly limit is already used up is shown but disabled (unless it's the
-  // type being edited, whose own prior amount is added back before checking).
-  const expenseTypeOptions = [...usage]
-    .sort((a, b) => EXPENSE_CATEGORY_OPTIONS.indexOf(a.expenseCategory) - EXPENSE_CATEGORY_OPTIONS.indexOf(b.expenseCategory))
-    .map((t) => {
-      const isEditingSameType = originalExpenseTypeId != null && originalExpenseTypeId === String(t.expenseTypeId);
-      const remaining = t.remainingAmount + (isEditingSameType ? originalAmount : 0);
-      return {
-        value: String(t.expenseTypeId),
-        label: t.expenseTypeName,
-        group: t.expenseCategory,
-        disabled: remaining <= 0,
-        disabledReason: remaining <= 0 ? 'Limit reached' : undefined,
-      };
-    });
+  // Only expense types the employee has an assigned limit for — within this page's
+  // category — are selectable; one whose monthly limit is already used up is shown
+  // but disabled (unless it's the type being edited, whose own prior amount is added
+  // back before checking). All options already share this page's single category, so
+  // no group header is needed here.
+  const expenseTypeOptions = usage.map((t) => {
+    const isEditingSameType = originalExpenseTypeId != null && originalExpenseTypeId === String(t.expenseTypeId);
+    const remaining = t.remainingAmount + (isEditingSameType ? originalAmount : 0);
+    return {
+      value: String(t.expenseTypeId),
+      label: t.expenseTypeName,
+      disabled: remaining <= 0,
+      disabledReason: remaining <= 0 ? 'Limit reached' : undefined,
+    };
+  });
   const selectedUsage = usage.find((u) => String(u.expenseTypeId) === expenseTypeId);
   const isTravel = isTravelExpenseType(selectedUsage?.expenseTypeName);
 
@@ -198,10 +201,11 @@ function FormFields({ originalExpenseTypeId, originalAmount = 0 }: FormFieldsPro
 }
 
 export const ExpenseForm = ({
-  defaultValues, existingBillUrls, onSubmit, isSubmitting, onCancel, submitLabel = 'Submit',
+  category, defaultValues, existingBillUrls, onSubmit, isSubmitting, onCancel, submitLabel = 'Submit',
 }: Props) => {
   const { user } = useAuthContext();
-  const { data: usage = [] } = useExpenseTypeUsage(user?.empId);
+  const { data: allUsage = [] } = useExpenseTypeUsage(user?.empId);
+  const usage = allUsage.filter((t) => t.expenseCategory === category);
   const originalExpenseTypeId = defaultValues?.expenseTypeId;
   const originalAmount = defaultValues?.amount ?? 0;
 
@@ -235,7 +239,7 @@ export const ExpenseForm = ({
   return (
     <FormProvider {...methods}>
       <Box component="form" onSubmit={methods.handleSubmit(handleValidatedSubmit)} noValidate>
-        <FormFields originalExpenseTypeId={originalExpenseTypeId} originalAmount={originalAmount} />
+        <FormFields category={category} originalExpenseTypeId={originalExpenseTypeId} originalAmount={originalAmount} />
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
           {onCancel && (

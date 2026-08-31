@@ -12,6 +12,9 @@ export const ACCOUNTS_KEYS = {
     ['accounts', 'settled-expenses', empId, fromDate, toDate, filterEmpId] as const,
   settlementReport: (empId: string, fromDate: string, toDate: string) =>
     ['accounts', 'settlement-report', empId, fromDate, toDate] as const,
+  yearlyUsage: (empId: string, year: number) => ['accounts', 'yearly-usage', empId, year] as const,
+  officeExpenseSettlement: (fromDate: string, toDate: string) =>
+    ['accounts', 'office-expense-settlement', fromDate, toDate] as const,
 };
 
 export const usePendingSettlements = (empId: string | undefined, filterEmpId?: string) =>
@@ -55,4 +58,17 @@ export const useSettlementReport = (empId: string | undefined, fromDate: string,
     queryKey: ACCOUNTS_KEYS.settlementReport(empId ?? '', fromDate, toDate),
     queryFn: () => accountsApi.getSettlementReport(empId as string, fromDate, toDate),
     enabled: !!empId,
+  });
+
+export const useYearlyUsage = (empId: string | undefined, year: number) =>
+  useQuery({
+    queryKey: ACCOUNTS_KEYS.yearlyUsage(empId ?? '', year),
+    queryFn: () => accountsApi.getYearlyUsage(empId as string, year),
+    enabled: !!empId,
+  });
+
+export const useOfficeExpenseSettlement = (fromDate: string, toDate: string) =>
+  useQuery({
+    queryKey: ACCOUNTS_KEYS.officeExpenseSettlement(fromDate, toDate),
+    queryFn: () => accountsApi.getOfficeExpenseSettlement(fromDate, toDate),
   });

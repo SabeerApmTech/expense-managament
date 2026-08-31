@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SnackbarProvider } from "notistack";
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { SnackbarProvider, closeSnackbar } from "notistack";
+import { ThemeProvider, createTheme, CssBaseline, IconButton } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { AppRouter } from "./router/AppRouter";
 import {
   AuthContext,
@@ -114,6 +115,15 @@ export default function App() {
           maxSnack={3}
           anchorOrigin={{ vertical: "top", horizontal: "right" }}
           autoHideDuration={3000}
+          action={(snackbarId) => (
+            <IconButton
+              size="small"
+              onClick={() => closeSnackbar(snackbarId)}
+              sx={{ color: "inherit", opacity: 0.85, "&:hover": { opacity: 1 } }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          )}
         >
           <AuthContext.Provider value={authValue}>
             {authValue.isAuthenticated && <IosInstallBanner />}

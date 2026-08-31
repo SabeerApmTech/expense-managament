@@ -5,7 +5,16 @@ import type { AuthUser } from '../types/auth.types';
 export const authApi = {
   login: async (empId: string, password: string): Promise<{ data: AuthUser; message?: string }> => {
     const response = await apiClient.post('/api/user-authentication/login', { empId, password });
-    return unwrap<AuthUser>(response.data);
+    const { data, message } = unwrap<AuthUser>(response.data);
+    return {
+      data: {
+        ...data,
+        officeId: data?.officeId ?? 0,
+        department: data?.department ?? '',
+        isAssetCreator: data?.isAssetCreator ?? false,
+      },
+      message,
+    };
   },
 
   changePassword: async (

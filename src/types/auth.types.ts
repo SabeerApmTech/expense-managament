@@ -10,11 +10,14 @@ export interface AuthUser {
   userId: number;
   empId: string;
   empName: string;
+  officeId: number;
+  department: string;
   role: Role;
   phoneNumber: string;
   isActive: boolean;
   isInitiator: boolean;
   isAccountant: boolean;
+  isAssetCreator: boolean;
 }
 
 export interface ApiResponse<T> {

@@ -19,7 +19,7 @@ import type { Column } from '../../../types/common.types';
 
 interface UserFlagSwitchProps {
   row: UserAccount;
-  field: 'isInitiator' | 'isAccountant';
+  field: 'isInitiator' | 'isAccountant' | 'isAssetCreator';
   currentUser: AuthUser;
 }
 
@@ -38,12 +38,17 @@ function UserFlagSwitch({ row, field, currentUser }: UserFlagSwitchProps) {
             empId: row.empId,
             empName: row.empName,
             dateOfBirth: row.dateOfBirth,
+            officeId: row.officeId,
+            department: row.department,
+            email: row.email,
+            bloodGroup: row.bloodGroup,
             role: row.role,
             countryCode: row.countryCode,
             phoneNumber: row.phoneNumber,
             isActive: row.isActive,
             isInitiator: field === 'isInitiator' ? e.target.checked : row.isInitiator,
             isAccountant: field === 'isAccountant' ? e.target.checked : row.isAccountant,
+            isAssetCreator: field === 'isAssetCreator' ? e.target.checked : row.isAssetCreator,
             updatedByEmpId: currentUser.empId,
           },
         });
@@ -82,6 +87,10 @@ export const UserManagementPage = () => {
     {
       id: 'isAccountant', label: 'Accountant', minWidth: 100,
       render: (_v, row) => (currentUser ? <UserFlagSwitch row={row} field="isAccountant" currentUser={currentUser} /> : null),
+    },
+    {
+      id: 'isAssetCreator', label: 'Asset Creator', minWidth: 110,
+      render: (_v, row) => (currentUser ? <UserFlagSwitch row={row} field="isAssetCreator" currentUser={currentUser} /> : null),
     },
   ];
 
